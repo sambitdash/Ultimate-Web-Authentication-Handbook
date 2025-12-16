@@ -9,6 +9,12 @@
 #   and an in-memory map.
 # - `/basicauth`: Implements HTTP Basic Authentication for the user 'jdoe' with
 #   password 'password'.
+# 
+#   /login
+#     GET: Shows a login form. POST: Authenticates user and sets session.
+#
+#   /resource
+#     Protected resource. Only accessible to logged-in users via session.
 #
 # Endpoints:
 #   /hello
@@ -25,6 +31,12 @@
 #     Implements HTTP Basic Authentication. Only authenticates user 'jdoe' with
 #     password 'password'.
 #
+#   /login
+#     GET: Shows a login form. POST: Authenticates user and sets session.
+#
+#   /resource
+#     Protected resource. Only accessible to logged-in users via session.
+#
 # Server:
 #   Listens on port 8080.
 # -----------------------------------------------------------------------------
@@ -32,6 +44,7 @@
 import base64
 import uuid
 from flask import Flask, request, make_response, session, redirect
+from flask import render_template_string
 
 app = Flask(__name__)
 app.secret_key = 'supersecretkey'
@@ -88,6 +101,47 @@ def session_count():
 @require_basic_auth
 def basicauth():
   return 'You are authenticated as jdoe.'
+
+# Simple in-memory user store
+users = {'jdoe': 'password'}
+
+@app.route('/login', methods=['GET', 'POST'])
+def login():
+  if request.method == 'POST':
+    username = request.form.get('username')
+    password = request.form.get('password')
+    if username in users and users[username] == password:
+      session['user'] = username
+      return redirect('/resource')
+    error = 'Invalid credentials'
+    return render_template_string('''
+      <form method="post">
+        <p style="color:red;">{{ error }}</p>
+        Username: <input name="username"><br>
+        Password: <input name="password" type="password"><br>
+        <input type="submit" value="Login">
+      </form>
+    ''', error=error)
+  return render_template_string('''
+    <form method="post">
+      Username: <input name="username"><br>
+      Password: <input name="password" type="password"><br>
+      <input type="submit" value="Login">
+    </form>
+  ''')
+
+def login_required(view_func):
+  def wrapper(*args, **kwargs):
+    if 'user' not in session:
+      return redirect('/login')
+    return view_func(*args, **kwargs)
+  wrapper.__name__ = view_func.__name__
+  return wrapper
+
+@app.route('/resource')
+@login_required
+def resource():
+  return f'Protected resource. You are logged in as {session["user"]}.'
 
 if __name__ == '__main__':
   app.run(host='0.0.0.0', port=8080, debug=True)
