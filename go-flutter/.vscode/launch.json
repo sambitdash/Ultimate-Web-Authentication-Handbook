@@ -6,11 +6,19 @@
   "configurations": [
     {
       "name": "ch1 main",
-      "cwd": "${workspaceFolder}/chapter-1",
+      "cwd": "chapter-1/main",
       "request": "launch",
       "type": "go",
       "mode": "debug",
-      "program": "${workspaceFolder}/chapter-1/main.go"          
+      "program": "chapter-1/main"
+    },
+    {
+      "name": "ch1 csrf server",
+      "cwd": "chapter-1/csrfsrv",
+      "request": "launch",
+      "type": "go",
+      "mode": "debug",
+      "program": "chapter-1/csrfsrv"
     },
     {
       "name": "ch2 server",

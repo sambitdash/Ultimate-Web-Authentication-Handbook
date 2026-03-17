@@ -23,6 +23,11 @@ The website exposes the following endpoints:
      presents a form. You can provide jdoe as the username and password as the password
      to authenticate. The scheme utilizes the session cookie to maintain
      post-authentication sessions.
+/transfer - this endpoint is vulnerable to CSRF attack. It allows you to transfer
+     some amount to another account. It checks for the session cookie but does not
+     implement any CSRF protection mechanism.
+/transfer-safe - this endpoint is protected against CSRF attack. It implements a
+     CSRF token mechanism to protect against CSRF attack.
 */
 
 package main
@@ -170,12 +175,97 @@ func addFormBasedAuthHandler() {
 	})
 }
 
+func addCSRFVulnerableHandler() {
+	http.HandleFunc("/transfer", func(w http.ResponseWriter, req *http.Request) {
+		// Check session validity
+		if _, err := req.Cookie("session"); err != nil {
+			w.WriteHeader(http.StatusUnauthorized)
+			return
+		}
+
+		form := `<form method="POST" action="/transfer">
+  <label for="amount">Amount:</label><br>
+  <input type="text" id="amount" name="amount"><br>
+  <input type="submit" value="Transfer">
+  </form>`
+
+		if req.Method == http.MethodGet {
+			w.Header().Add("Content-Type", "text/html")
+			w.Write([]byte(form))
+			return
+		}
+
+		if req.Method == http.MethodPost {
+			amount := req.FormValue("amount")
+			str := fmt.Sprintf("Transferred %s units", amount)
+			log.Default().Print(str)
+			io.WriteString(w, str)
+			return
+		}
+
+		w.WriteHeader(http.StatusMethodNotAllowed)
+	})
+}
+
+func addCSRFSafeHandler() {
+	csrfTokens := map[string]string{}
+	http.HandleFunc("/transfer-safe", func(w http.ResponseWriter, req *http.Request) {
+		// Check session validity
+		var cookie *http.Cookie
+		var err error
+		if cookie, err = req.Cookie("session"); err != nil {
+			w.WriteHeader(http.StatusUnauthorized)
+			return
+		}
+
+		sessionID := cookie.Value
+		if sessionID == "" {
+			w.WriteHeader(http.StatusUnauthorized)
+			return
+		}
+
+		if req.Method == http.MethodGet {
+			csrfToken := uuid.NewString()
+			csrfTokens[sessionID] = csrfToken
+			form := fmt.Sprintf(`<form method="POST" action="/transfer-safe">
+  <label for="amount">Amount:</label><br>
+  <input type="text" id="amount" name="amount"><br>
+  <input type="hidden" name="csrf_token" value="%s">
+  <input type="submit" value="Transfer">
+  </form>`, csrfToken)
+			w.Header().Add("Content-Type", "text/html")
+			w.Write([]byte(form))
+			return
+		}
+
+		if req.Method == http.MethodPost {
+			providedToken := req.FormValue("csrf_token")
+			storedToken := csrfTokens[sessionID]
+			if providedToken == "" || providedToken != storedToken {
+				w.WriteHeader(http.StatusForbidden)
+				io.WriteString(w, "CSRF token validation failed")
+				return
+			}
+
+			amount := req.FormValue("amount")
+			str := fmt.Sprintf("Transferred %s units", amount)
+			log.Default().Print(str)
+			delete(csrfTokens, sessionID)
+			io.WriteString(w, str)
+			return
+		}
+
+		w.WriteHeader(http.StatusMethodNotAllowed)
+	})
+}
+
 func main() {
 	addHelloHandler()
 	addCountHandler()
 	addSessionHandler()
 	addBasicAuthHandler()
 	addFormBasedAuthHandler()
-
+	addCSRFVulnerableHandler()
+	addCSRFSafeHandler()
 	log.Fatal(http.ListenAndServe(":8080", nil))
 }
