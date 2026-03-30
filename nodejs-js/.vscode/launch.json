@@ -7,13 +7,23 @@
     {
       "type": "node",
       "request": "launch",
-      "name": "ch1",
+      "name": "ch1 main",
       "skipFiles": [
       "<node_internals>/**"
       ],
-      "program": "${workspaceFolder}/chapter-1/index.js",
-      "cwd": "${workspaceFolder}/chapter-1"
+      "program": "${workspaceFolder}/chapter-1/main/index.js",
+      "cwd": "${workspaceFolder}/chapter-1/main"
     },
+    {
+      "type": "node",
+      "request": "launch",
+      "name": "ch1 csrfsrv",
+      "skipFiles": [
+      "<node_internals>/**"
+      ],
+      "program": "${workspaceFolder}/chapter-1/csrfsrv/index.js",
+      "cwd": "${workspaceFolder}/chapter-1/csrfsrv"
+    },    
     {
       "type": "node",
       "request": "launch",
