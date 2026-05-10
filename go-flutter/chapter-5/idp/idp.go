@@ -1,8 +1,6 @@
 /*
-Chapter-5: Federated Authentication-II
+Chapter-4: Federated Authentication-I
 Ultimate Web Authentication Handbook by Sambit Kumar Dash
-
-This sample code shows the PKCE code grant and token refresh using OAuth 2.
 
 # Add these values to the /etc/hosts file.
 # On Windows, the file can be: C:\Windows\System32\drivers\etc\hosts
@@ -13,56 +11,49 @@ before accessing the website.
 
 Start the server with the command: go run ./idp.go
 
-The website runs at https://idp.local:8443/.
+# Go to the folder frontend and build the flutter application using
 
-- You will need to access it through the PKCE native client found in the
-pkce/client folder.
-- You need to run the pkce/resource server as well.
+flutter build web
+
+The website runs at https://idp.local:8443/
+
+The IDP provides a SAML IDP.
 
 */
 
 package main
 
 import (
-	"context"
+	"bytes"
+	"crypto"
+	"crypto/rsa"
 	"crypto/tls"
+	"crypto/x509"
 	"encoding/json"
-	"flag"
 	"fmt"
 	"io"
 	"log"
 	"net/http"
-	"net/http/httputil"
 	"net/url"
 	"os"
+	"strconv"
 	"time"
 
-	"github.com/go-oauth2/oauth2/v4/generates"
-
-	oauth2 "github.com/go-oauth2/oauth2/v4"
-	"github.com/go-oauth2/oauth2/v4/errors"
-	"github.com/go-oauth2/oauth2/v4/manage"
-	"github.com/go-oauth2/oauth2/v4/models"
-	"github.com/go-oauth2/oauth2/v4/server"
-	"github.com/go-oauth2/oauth2/v4/store"
-	"github.com/go-session/session"
+	"github.com/crewjam/saml/samlidp"
+	"github.com/crewjam/saml/samlsp"
+	"github.com/rs/cors"
+	"golang.org/x/crypto/bcrypt"
 
 	"howa.in/common"
 )
 
-var (
-	dumpvar   bool
-	idvar     string
-	secretvar string
-	domainvar string
-	portvar   int
-)
+var sploaded bool = false
 
 func setupTLSServer(srvName string) *http.Server {
 	cert, err := common.GetTLSCert(
-		"../certs/scas.crt",
-		fmt.Sprintf("../certs/%s.crt", srvName),
-		fmt.Sprintf("../certs/%s.key", srvName),
+		"certs/ssl/scas.crt",
+		fmt.Sprintf("certs/ssl/%s.crt", srvName),
+		fmt.Sprintf("certs/ssl/%s.key", srvName),
 		[]byte("password"))
 	if err != nil {
 		log.Default().Fatal(err)
@@ -80,244 +71,262 @@ func setupTLSServer(srvName string) *http.Server {
 	}
 }
 
-func init() {
-	flag.BoolVar(&dumpvar, "d", true, "Dump requests and responses")
-	flag.StringVar(&idvar, "i", "222222", "The client id being passed in")
-	flag.StringVar(&secretvar, "s", "22222222", "The client secret being passed in")
-	flag.StringVar(&domainvar, "r", "https://mysrv.local:8444", "The domain of the redirect url")
-	flag.IntVar(&portvar, "p", 8443, "the base port for the server")
+func addSP(httpsclient *http.Client, fn string, svcurl string, svcname string, mdurl string, scurl string) {
+	if file, err := os.Open(fn); err == nil {
+		defer file.Close()
+
+		uri, _ := url.Parse(svcurl)
+		req := http.Request{
+			Method: http.MethodPut,
+			URL:    uri,
+			Body:   file,
+		}
+
+		if _, err := httpsclient.Do(&req); err != nil {
+			log.Fatal(err)
+		}
+
+		shortcut := samlidp.Shortcut{
+			Name:                  svcname,
+			ServiceProviderID:     mdurl,
+			URISuffixAsRelayState: true,
+		}
+
+		data, _ := json.Marshal(&shortcut)
+
+		uri, _ = url.Parse(scurl)
+		req = http.Request{
+			Method: http.MethodPut,
+			URL:    uri,
+			Body:   io.NopCloser(bytes.NewReader(data)),
+		}
+
+		if _, err := httpsclient.Do(&req); err != nil {
+			log.Fatal(err)
+		}
+	}
+}
+
+func addServiceProviders(w http.ResponseWriter, r *http.Request) {
+
+	httpsclient, err := common.GetHTTPSClient("certs/ssl/scas.crt")
+	if err != nil {
+		log.Fatal(err)
+	}
+	addSP(httpsclient,
+		"sp/idpportal.xml",
+		"https://idp.local:8443/idp/services/idpportal",
+		"IDPPortal",
+		"https://idp.local:8443/saml/metadata",
+		"https://idp.local:8443/idp/shortcuts/idpportal")
+	addSP(httpsclient,
+		"sp/hr.xml",
+		"https://idp.local:8443/idp/services/hr",
+		"HR",
+		"https://hr.mysrv.local:8444/saml/metadata",
+		"https://idp.local:8443/idp/shortcuts/hr")
+	addSP(httpsclient,
+		"sp/finance.xml",
+		"https://idp.local:8443/idp/services/finance",
+		"Finance",
+		"https://hr.mysrv.local:8445/saml/metadata",
+		"https://idp.local:8443/idp/shortcuts/finance")
+	sploaded = true
+	http.SetCookie(w, &http.Cookie{
+		Name:     "sploaded",
+		Value:    strconv.FormatBool(sploaded),
+		HttpOnly: false,
+		Path:     "/",
+	})
+}
+
+func addUsers(idpServer *samlidp.Server) {
+	hashedPassword, _ := bcrypt.GenerateFromPassword([]byte("password"), bcrypt.DefaultCost)
+
+	idpServer.Store.Put("/users/alice", samlidp.User{
+		Name:           "alice",
+		HashedPassword: hashedPassword,
+		Groups:         []string{"hradmin", "users"},
+		Email:          "alice@example.com",
+		CommonName:     "Alice Smith",
+		Surname:        "Smith",
+		GivenName:      "Alice",
+	})
+
+	idpServer.Store.Put("/users/bob", samlidp.User{
+		Name:           "bob",
+		HashedPassword: hashedPassword,
+		Groups:         []string{"financeadmin", "users"},
+		Email:          "bob@example.com",
+		CommonName:     "Bob Smith",
+		Surname:        "Smith",
+		GivenName:      "Bob",
+	})
+
+	idpServer.Store.Put("/users/carol", samlidp.User{
+		Name:           "carol",
+		HashedPassword: hashedPassword,
+		Groups:         []string{"itadmin", "users"},
+		Email:          "carol@example.com",
+		CommonName:     "Carol Smith",
+		Surname:        "Smith",
+		GivenName:      "Carol",
+	})
+
+	idpServer.Store.Put("/users/don", samlidp.User{
+		Name:           "don",
+		HashedPassword: hashedPassword,
+		Groups:         []string{"users"},
+		Email:          "don@example.com",
+		CommonName:     "Don Lewis",
+		Surname:        "Lewis",
+		GivenName:      "Don",
+	})
+}
+
+func addIDPAuth(idpServer *samlidp.Server, key *rsa.PrivateKey, cert *x509.Certificate) {
+	rootURL, err := url.Parse("https://idp.local:8443/")
+	if err != nil {
+		log.Default().Fatalf("cannot parse base URL: %v", err)
+	}
+
+	if idpAuth, err := samlsp.New(samlsp.Options{
+		URL:               *rootURL,
+		Key:               key,
+		Certificate:       cert,
+		AllowIDPInitiated: true,
+		SignRequest:       true,
+		IDPMetadata:       idpServer.IDP.Metadata(),
+	}); err != nil {
+		log.Default().Fatalf("Unable to start HR SP %v", err)
+	} else {
+		http.Handle("/saml/", idpAuth)
+		http.Handle("/auth/",
+			idpAuth.RequireAccount(
+				http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+					sProvider := idpAuth.Session
+					switch r.URL.Path {
+					case "/auth/logout":
+						sProvider.DeleteSession(w, r)
+						http.SetCookie(w, &http.Cookie{
+							Name:     "uid",
+							Value:    "deleted",
+							HttpOnly: false,
+							Secure:   true,
+							Path:     "/",
+							Expires:  time.Now().Add(-5 * time.Minute),
+						})
+						if c, err := r.Cookie("session"); err == nil {
+							idpServer.Store.Delete(fmt.Sprintf("/sessions/%s", c.Value))
+							http.SetCookie(w, &http.Cookie{
+								Name:     "session",
+								Value:    "deleted",
+								HttpOnly: false,
+								Path:     "/",
+								Expires:  time.Now().Add(-5 * time.Minute),
+							})
+						}
+					default:
+						if session, err := sProvider.GetSession(r); err == nil {
+							uid := session.(samlsp.SessionWithAttributes).GetAttributes().Get("uid")
+							http.SetCookie(w, &http.Cookie{
+								Name:     "uid",
+								Value:    uid,
+								HttpOnly: false,
+								Secure:   true,
+								Path:     "/",
+							})
+							log.Default().Println("The user ", uid, " logged in successfully.")
+						}
+					}
+					http.Redirect(w, r, "/", http.StatusFound)
+				}),
+			),
+		)
+	}
+}
+
+func invalidateIDPSession(w http.ResponseWriter, r *http.Request, idpServer *samlidp.Server) {
+	if ck, err := r.Cookie("session"); err == nil {
+		sessions, _ := idpServer.Store.List("/sessions/")
+		bFound := false
+		for _, s := range sessions {
+			if ck.Value == s {
+				bFound = true
+				break
+			}
+		}
+		if !bFound {
+			http.SetCookie(w, &http.Cookie{
+				Name:     "uid",
+				Value:    "deleted",
+				HttpOnly: false,
+				Secure:   true,
+				Path:     "/",
+				Expires:  time.Now().Add(-5 * time.Minute),
+			})
+			http.SetCookie(w, &http.Cookie{
+				Name:     "session",
+				Value:    "deleted",
+				HttpOnly: false,
+				Path:     "/",
+				Expires:  time.Now().Add(-5 * time.Minute),
+			})
+			http.SetCookie(w, &http.Cookie{
+				Name:     "token",
+				Value:    "deleted",
+				Domain:   ".idp.local",
+				HttpOnly: true,
+				Secure:   true,
+				Path:     "/",
+				Expires:  time.Now().Add(-5 * time.Minute),
+			})
+			log.Default().Print(err)
+		}
+	}
 }
 
 func main() {
-	flag.Parse()
-	if dumpvar {
-		log.Println("Dumping requests")
-	}
-	manager := manage.NewDefaultManager()
-	manager.SetAuthorizeCodeTokenCfg(&manage.Config{
-		AccessTokenExp:    time.Second * 30,
-		RefreshTokenExp:   time.Hour,
-		IsGenerateRefresh: true,
-	})
+	var baseURL *url.URL
+	var err error
+	var key crypto.PrivateKey
+	var cert *x509.Certificate
 
-	// token store
-	manager.MustTokenStorage(store.NewMemoryTokenStore())
-	manager.MapAccessGenerate(generates.NewAccessGenerate())
-
-	clientStore := store.NewClientStore()
-	clientStore.Set(idvar, &models.Client{
-		ID:     idvar,
-		Domain: domainvar,
-	})
-	manager.MapClientStorage(clientStore)
-
-	srv := server.NewServer(&server.Config{
-		TokenType:            "Bearer",
-		AllowedResponseTypes: []oauth2.ResponseType{oauth2.Code, oauth2.Token},
-		AllowedGrantTypes: []oauth2.GrantType{
-			oauth2.AuthorizationCode,
-			oauth2.PasswordCredentials,
-			oauth2.ClientCredentials,
-			oauth2.Refreshing,
-		},
-		AllowedCodeChallengeMethods: []oauth2.CodeChallengeMethod{
-			oauth2.CodeChallengePlain,
-			oauth2.CodeChallengeS256,
-		},
-	}, manager)
-
-	srv.SetClientInfoHandler(server.ClientFormHandler)
-
-	srv.SetPasswordAuthorizationHandler(func(ctx context.Context, clientID, username, password string) (userID string, err error) {
-		if username == "alice" && password == "password" {
-			userID = "alice"
-		}
-		return
-	})
-
-	srv.SetUserAuthorizationHandler(userAuthorizeHandler)
-
-	srv.SetInternalErrorHandler(func(err error) (re *errors.Response) {
-		log.Println("Internal Error:", err.Error())
-		return
-	})
-
-	srv.SetResponseErrorHandler(func(re *errors.Response) {
-		log.Println("Response Error:", re.Error.Error())
-	})
-
-	http.HandleFunc("/login", loginHandler)
-	http.HandleFunc("/auth", authHandler)
-
-	http.HandleFunc("/oauth/authorize", func(w http.ResponseWriter, r *http.Request) {
-		if dumpvar {
-			dumpRequest(os.Stdout, "authorize", r)
-		}
-
-		store, err := session.Start(r.Context(), w, r)
-		if err != nil {
-			http.Error(w, err.Error(), http.StatusInternalServerError)
-			return
-		}
-
-		var form url.Values
-		if v, ok := store.Get("ReturnUri"); ok {
-			form = v.(url.Values)
-		}
-		r.Form = form
-
-		store.Delete("ReturnUri")
-		store.Save()
-
-		err = srv.HandleAuthorizeRequest(w, r)
-		if err != nil {
-			http.Error(w, err.Error(), http.StatusBadRequest)
-		}
-	})
-
-	http.HandleFunc("/oauth/token", func(w http.ResponseWriter, r *http.Request) {
-		if dumpvar {
-			_ = dumpRequest(os.Stdout, "token", r) // Ignore the error
-		}
-
-		err := srv.HandleTokenRequest(w, r)
-		if err != nil {
-			http.Error(w, err.Error(), http.StatusInternalServerError)
-		}
-	})
-
-	http.HandleFunc("/test", func(w http.ResponseWriter, r *http.Request) {
-		if dumpvar {
-			_ = dumpRequest(os.Stdout, "test", r) // Ignore the error
-		}
-		token, err := srv.ValidationBearerToken(r)
-		if err != nil {
-			http.Error(w, err.Error(), http.StatusBadRequest)
-			return
-		}
-
-		data := map[string]interface{}{
-			"expires_in": int64(time.Until(token.GetAccessCreateAt().Add(token.GetAccessExpiresIn())).Seconds()),
-			"client_id":  token.GetClientID(),
-			"user_id":    token.GetUserID(),
-		}
-		e := json.NewEncoder(w)
-		e.SetIndent("", "  ")
-		e.Encode(data)
-	})
-
-	tlsserver := setupTLSServer("idp.local")
-
-	log.Printf("Server is running at %d port.\n", portvar)
-	log.Printf("Point your OAuth client Auth endpoint to %s:%d%s", "https://idp.local", portvar, "/oauth/authorize")
-	log.Printf("Point your OAuth client Token endpoint to %s:%d%s", "https://idp.local", portvar, "/oauth/token")
-	log.Fatal(tlsserver.ListenAndServeTLS("", ""))
-}
-
-func dumpRequest(writer io.Writer, header string, r *http.Request) error {
-	data, err := httputil.DumpRequest(r, true)
-	if err != nil {
-		return err
-	}
-	writer.Write([]byte("\n" + header + ": \n"))
-	writer.Write(data)
-	return nil
-}
-
-func userAuthorizeHandler(w http.ResponseWriter, r *http.Request) (userID string, err error) {
-	if dumpvar {
-		_ = dumpRequest(os.Stdout, "userAuthorizeHandler", r) // Ignore the error
-	}
-	store, err := session.Start(r.Context(), w, r)
-	if err != nil {
-		return
+	if baseURL, err = url.Parse("https://idp.local:8443/idp"); err != nil {
+		log.Default().Fatalf("cannot parse base URL: %v", err)
 	}
 
-	uid, ok := store.Get("LoggedInUserID")
-	if !ok {
-		if r.Form == nil {
-			r.ParseForm()
-		}
-
-		store.Set("ReturnUri", r.Form)
-		store.Save()
-
-		w.Header().Set("Location", "/login")
-		w.WriteHeader(http.StatusFound)
-		return
+	if key, cert, err = common.GetProviderCertAndKey("certs/idp.crt", "certs/idp.key", []byte("password")); err != nil {
+		log.Default().Fatalf("%v", err)
 	}
 
-	userID = uid.(string)
-	store.Delete("LoggedInUserID")
-	store.Save()
-	return
-}
+	if idpServer, err := samlidp.New(samlidp.Options{
+		URL:         *baseURL,
+		Key:         key,
+		Certificate: cert,
+		Store:       &samlidp.MemoryStore{},
+	}); err != nil {
+		log.Default().Fatalf("%s", err)
+	} else {
+		addUsers(idpServer)
 
-func loginHandler(w http.ResponseWriter, r *http.Request) {
-	if dumpvar {
-		_ = dumpRequest(os.Stdout, "login", r) // Ignore the error
+		cors := cors.New(cors.Options{
+			AllowedOrigins: []string{"https://hr.mysrv.local:8444", "https://finance.mysrv.local:8445"},
+		})
+		http.Handle("/idp/", cors.Handler(http.StripPrefix("/idp", idpServer)))
+		http.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
+			http.SetCookie(w, &http.Cookie{
+				Name:     "sploaded",
+				Value:    strconv.FormatBool(sploaded),
+				HttpOnly: false,
+				Path:     "/",
+			})
+			invalidateIDPSession(w, r, idpServer)
+			http.FileServer(http.Dir("frontend/build/web")).ServeHTTP(w, r)
+		})
+		http.HandleFunc("/addsps", addServiceProviders)
+		addIDPAuth(idpServer, key.(*rsa.PrivateKey), cert)
 	}
-	store, err := session.Start(r.Context(), w, r)
-	if err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
-		return
-	}
-
-	if r.Method == "POST" {
-		if r.Form == nil {
-			if err := r.ParseForm(); err != nil {
-				http.Error(w, err.Error(), http.StatusInternalServerError)
-				return
-			}
-		}
-		store.Set("LoggedInUserID", r.Form.Get("username"))
-		store.Save()
-
-		w.Header().Set("Location", "/auth")
-		w.WriteHeader(http.StatusFound)
-		return
-	}
-
-	w.Write([]byte(`
-  <html>
-    <body>
-      <h1>Login In</h1>
-      <form action="/login" method="POST">
-        <label for="username">Username</label>
-        <input type="text" name="username" required placeholder="usernamee">
-        <label for="password">Password</label>
-        <input type="password" name="password" placeholder="password">
-        <button type="submit" >Login</button>
-      </form>
-    </body>
-  </html>
-  `))
-}
-
-func authHandler(w http.ResponseWriter, r *http.Request) {
-	if dumpvar {
-		_ = dumpRequest(os.Stdout, "auth", r) // Ignore the error
-	}
-	store, err := session.Start(r.Context(), w, r)
-	if err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
-		return
-	}
-
-	if _, ok := store.Get("LoggedInUserID"); !ok {
-		w.Header().Set("Location", "/login")
-		w.WriteHeader(http.StatusFound)
-		return
-	}
-
-	w.Write([]byte(`
-    <html><body>
-      <form action="/oauth/authorize" method="POST">
-        <h1>Authorize</h1>
-        <p>The client would like to perform actions on your behalf.</p>
-        <p>
-          <button type="submit">Allow</button>
-        </p>
-      </form>
-    </body></html>`))
+	server := setupTLSServer("idp.local")
+	log.Default().Fatal(server.ListenAndServeTLS("", ""))
 }

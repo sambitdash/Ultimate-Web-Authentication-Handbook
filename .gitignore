@@ -12,3 +12,4 @@ python-js/chapter-4/*/*.xml
 *.log
 *.env
 *.sqlite3
+.python-version

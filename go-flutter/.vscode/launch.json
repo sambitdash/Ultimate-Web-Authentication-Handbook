@@ -29,12 +29,12 @@
       "program": "${workspaceFolder}/chapter-2/server.go"          
     },
     {
-      "name": "ch3 main",
-      "cwd": "${workspaceFolder}/chapter-3",
+      "name": "ch4 main",
+      "cwd": "${workspaceFolder}/chapter-4",
       "request": "launch",
       "type": "go",
       "mode": "debug",
-      "program": "${workspaceFolder}/chapter-3/main.go"          
+      "program": "${workspaceFolder}/chapter-4/main.go"          
     },
     {
       "name": "ch4 idp",
