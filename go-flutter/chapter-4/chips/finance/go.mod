@@ -1,4 +1,4 @@
-module howa.in/chapter-3
+module howa.in/chapter-4/forms/finance
 
 go 1.24.2
 
@@ -9,4 +9,4 @@ require (
 	howa.in/common v0.0.0-00010101000000-000000000000
 )
 
-replace howa.in/common => ../common
+replace howa.in/common => ../../../common

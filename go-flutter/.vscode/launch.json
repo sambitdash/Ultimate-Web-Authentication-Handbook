@@ -30,38 +30,67 @@
     },
     {
       "name": "ch4 main",
-      "cwd": "${workspaceFolder}/chapter-4",
+      "cwd": "${workspaceFolder}/chapter-4/main",
       "request": "launch",
       "type": "go",
       "mode": "debug",
-      "program": "${workspaceFolder}/chapter-4/main.go"          
+      "program": "${workspaceFolder}/chapter-4/main/main.go"          
     },
     {
-      "name": "ch4 idp",
-      "cwd": "${workspaceFolder}/chapter-4/idp",
+      "name": "ch4 chips chat",
+      "cwd": "${workspaceFolder}/chapter-4/chips/chat",
       "request": "launch",
       "type": "go",
       "mode": "debug",
-      "program": "${workspaceFolder}/chapter-4/idp/idp.go",
-      "preLaunchTask": "ch4 idp frontend"
+      "program": "${workspaceFolder}/chapter-4/chips/chat/chat.go",
     },
     {
-      "name": "ch4 finance",
-      "cwd": "${workspaceFolder}/chapter-4/finance",
+      "name": "ch4 chips finance",
+      "cwd": "${workspaceFolder}/chapter-4/chips/finance",
       "request": "launch",
       "type": "go",
       "mode": "debug",
-      "program": "${workspaceFolder}/chapter-4/finance/finance.go",
-      "preLaunchTask": "ch4 finance delay frontend"
+      "program": "${workspaceFolder}/chapter-4/chips/finance/finance.go",
     },
     {
-      "name": "ch4 hr",
-      "cwd": "${workspaceFolder}/chapter-4/hr",
+      "name": "ch4 chips hr",
+      "cwd": "${workspaceFolder}/chapter-4/chips/hr",
       "request": "launch",
       "type": "go",
       "mode": "debug",
-      "program": "${workspaceFolder}/chapter-4/hr/hr.go",
-      "preLaunchTask": "ch4 hr delay frontend"
+      "program": "${workspaceFolder}/chapter-4/chips/hr/hr.go",
+    },
+    {
+      "name": "ch4 chips acme",
+      "cwd": "${workspaceFolder}/chapter-4/chips/acme",
+      "request": "launch",
+      "type": "go",
+      "mode": "debug",
+      "program": "${workspaceFolder}/chapter-4/chips/acme/acme.go",
+    },
+    {
+      "name": "ch4 redirect idp",
+      "cwd": "${workspaceFolder}/chapter-4/redirect/idp",
+      "request": "launch",
+      "type": "go",
+      "mode": "debug",
+      "program": "${workspaceFolder}/chapter-4/redirect/idp/idp.go",
+    },
+    {
+      "name": "ch4 redirect finance",
+      "cwd": "${workspaceFolder}/chapter-4/redirect/finance",
+      "request": "launch",
+      "type": "go",
+      "mode": "debug",
+      "program": "${workspaceFolder}/chapter-4/redirect/finance/finance.go",
+    },
+    {
+      "name": "ch4 redirect hr",
+      "cwd": "${workspaceFolder}/chapter-4/redirect/hr",
+      "request": "launch",
+      "type": "go",
+      "mode": "debug",
+      "program": "${workspaceFolder}/chapter-4/redirect/hr/hr.go",
     },
     {
       "name": "ch5 github authcode",
@@ -143,9 +172,13 @@
   ],
   "compounds": [
     {
-      "name": "ch4",
-      "configurations": ["ch4 idp", "ch4 hr", "ch4 finance"]
+      "name": "ch4 redirect",
+      "configurations": ["ch4 redirect idp", "ch4 redirect hr", "ch4 redirect finance"]
     },
+    {
+      "name": "ch4 chips",
+      "configurations": ["ch4 chips chat", "ch4 chips hr", "ch4 chips finance", "ch4 chips acme"]
+    },    
     {
       "name": "ch5 pkce",
       "configurations": ["ch5 idp", "ch5 pkce client", "ch5 pkce resource"]

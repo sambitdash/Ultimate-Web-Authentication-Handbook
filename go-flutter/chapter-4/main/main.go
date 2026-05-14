@@ -1,6 +1,6 @@
 /*
 
-Chapter-3: Authentication with Network Security
+Chapter-4: Authentication with Network Security
 Ultimate Web Authentication Handbook by Sambit Kumar Dash
 
 # Add these values to the /etc/hosts file.
@@ -83,7 +83,7 @@ func configureClientAuth(tlsConfig *tls.Config) error {
 	})
 
 	// Client CAs added to TLSConfig. Now, server can trust client certs.
-	if data, err := os.ReadFile("certs/server/cint.crt"); err == nil {
+	if data, err := os.ReadFile("../certs/server/cint.crt"); err == nil {
 		var block *pem.Block
 		certpool := x509.NewCertPool()
 		for block, data = pem.Decode(data); block != nil; block, data = pem.Decode(data) {
@@ -107,9 +107,9 @@ func main() {
 	addBasicAuthHandler()
 
 	cert, err := common.GetTLSCert(
-		"certs/server/scas.crt",
-		"certs/server/mysrv.local.crt",
-		"certs/server/mysrv.local.key",
+		"../certs/server/scas.crt",
+		"../certs/server/mysrv.local.crt",
+		"../certs/server/mysrv.local.key",
 		[]byte("password"))
 	if err != nil {
 		log.Default().Fatal(err)
