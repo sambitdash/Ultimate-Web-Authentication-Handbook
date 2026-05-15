@@ -93,6 +93,22 @@
       "program": "${workspaceFolder}/chapter-4/redirect/hr/hr.go",
     },
     {
+      "name": "ch4 cors idp",
+      "cwd": "${workspaceFolder}/chapter-4/cors/idp",
+      "request": "launch",
+      "type": "go",
+      "mode": "debug",
+      "program": "${workspaceFolder}/chapter-4/cors/idp/idp.go",
+    },
+    {
+      "name": "ch4 cors client",
+      "cwd": "${workspaceFolder}/chapter-4/cors/client",
+      "request": "launch",
+      "type": "go",
+      "mode": "debug",
+      "program": "${workspaceFolder}/chapter-4/cors/client/client.go",
+    },
+    {
       "name": "ch5 github authcode",
       "cwd": "${workspaceFolder}/chapter-5/github",
       "request": "launch",
@@ -178,7 +194,11 @@
     {
       "name": "ch4 chips",
       "configurations": ["ch4 chips chat", "ch4 chips hr", "ch4 chips finance", "ch4 chips acme"]
-    },    
+    },
+    {
+      "name": "ch4 cors",
+      "configurations": ["ch4 cors idp", "ch4 cors client"]
+    },        
     {
       "name": "ch5 pkce",
       "configurations": ["ch5 idp", "ch5 pkce client", "ch5 pkce resource"]

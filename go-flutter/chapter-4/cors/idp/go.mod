@@ -1,4 +1,4 @@
-module howa.in/chapter-4/redirect/finance
+module howa.in/chapter-4/cors/idp
 
 go 1.24.2
 

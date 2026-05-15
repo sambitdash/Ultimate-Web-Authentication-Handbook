@@ -1,4 +1,4 @@
-module howa.in/chapter-4/forms/idp
+module howa.in/chapter-4/redirect/idp
 
 go 1.24.2
 

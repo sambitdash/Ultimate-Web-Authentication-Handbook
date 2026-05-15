@@ -13,3 +13,4 @@ python-js/chapter-4/*/*.xml
 *.env
 *.sqlite3
 .python-version
+_debug*

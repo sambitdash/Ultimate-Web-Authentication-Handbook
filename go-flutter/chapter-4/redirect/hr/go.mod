@@ -1,4 +1,4 @@
-module howa.in/chapter-4/forms/hr
+module howa.in/chapter-4/redirect/hr
 
 go 1.24.2
 
