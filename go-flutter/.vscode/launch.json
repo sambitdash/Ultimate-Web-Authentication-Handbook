@@ -109,6 +109,33 @@
       "program": "${workspaceFolder}/chapter-4/cors/client/client.go",
     },
     {
+      "name": "ch5 idp",
+      "cwd": "${workspaceFolder}/chapter-5/idp",
+      "request": "launch",
+      "type": "go",
+      "mode": "debug",
+      "program": "${workspaceFolder}/chapter-5/idp/idp.go",
+      "preLaunchTask": "ch5 idp frontend"
+    },
+    {
+      "name": "ch5 finance",
+      "cwd": "${workspaceFolder}/chapter-5/finance",
+      "request": "launch",
+      "type": "go",
+      "mode": "debug",
+      "program": "${workspaceFolder}/chapter-5/finance/finance.go",
+      "preLaunchTask": "ch5 finance delay frontend"
+    },
+    {
+      "name": "ch5 hr",
+      "cwd": "${workspaceFolder}/chapter-5/hr",
+      "request": "launch",
+      "type": "go",
+      "mode": "debug",
+      "program": "${workspaceFolder}/chapter-5/hr/hr.go",
+      "preLaunchTask": "ch5 hr delay frontend"
+    },
+    {
       "name": "ch5 github authcode",
       "cwd": "${workspaceFolder}/chapter-5/github",
       "request": "launch",
@@ -198,7 +225,11 @@
     {
       "name": "ch4 cors",
       "configurations": ["ch4 cors idp", "ch4 cors client"]
-    },        
+    },
+    {
+      "name": "ch5",
+      "configurations": ["ch5 idp", "ch5 hr", "ch5 finance"]
+    },            
     {
       "name": "ch5 pkce",
       "configurations": ["ch5 idp", "ch5 pkce client", "ch5 pkce resource"]

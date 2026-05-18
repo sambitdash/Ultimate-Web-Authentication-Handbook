@@ -4,19 +4,17 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:http/http.dart' as http;
 import 'package:url_launcher/url_launcher.dart';
-import 'dart:html';
+import 'package:web/web.dart' as web;
 
 class CookieRead extends ChangeNotifier {
   String? uid;
   readCookies() {
     uid = null;
-    if (document.cookie != null) {
-      var cookies = document.cookie!.split(';');
-      for (var cookie in cookies) {
-        final splitted = cookie.split('=');
-        if (splitted[0].trim() == "uid") {
-          uid = splitted[1].trim();
-        }
+    var cookies = web.document.cookie.split(';');
+    for (var cookie in cookies) {
+      final splitted = cookie.split('=');
+      if (splitted[0].trim() == "uid") {
+        uid = splitted[1].trim();
       }
     }
   }
