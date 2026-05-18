@@ -5,7 +5,7 @@ import 'package:http/http.dart' as http;
 import 'package:provider/provider.dart';
 import 'package:xml/xml.dart';
 import 'package:url_launcher/url_launcher.dart';
-import 'dart:html';
+import 'package:web/web.dart' as web;
 
 class CookieRead extends ChangeNotifier {
   String? uid;
@@ -14,16 +14,14 @@ class CookieRead extends ChangeNotifier {
   readCookies() {
     uid = null;
     sploaded = false;
-    if (document.cookie != null) {
-      var cookies = document.cookie!.split(';');
-      for (var cookie in cookies) {
-        final splitted = cookie.split('=');
-        if (splitted[0].trim() == "uid") {
-          uid = splitted[1].trim();
-        }
-        if (splitted[0].trim() == "sploaded") {
-          sploaded = (splitted[1].toLowerCase() == "true");
-        }
+    var cookies = web.document.cookie.split(';');
+    for (var cookie in cookies) {
+      final splitted = cookie.split('=');
+      if (splitted[0].trim() == "uid") {
+        uid = splitted[1].trim();
+      }
+      if (splitted[0].trim() == "sploaded") {
+        sploaded = (splitted[1].toLowerCase() == "true");
       }
     }
   }
