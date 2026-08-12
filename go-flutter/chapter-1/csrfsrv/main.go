@@ -7,14 +7,23 @@ package main
 import (
 	"fmt"
 	"io"
+	"log"
 	"net/http"
 )
 
 func main() {
-	http.HandleFunc("/", handleHome)
-	http.HandleFunc("/csrf-safe", handleSafe)
+	handlerMux := http.NewServeMux()
+	if handlerMux == nil {
+		log.Fatal("Failed to create handler mux")
+	}
+	handlerMux.HandleFunc("/", handleHome)
+	handlerMux.HandleFunc("/csrf-safe", handleSafe)
+	server := &http.Server{
+		Addr:    ":7070",
+		Handler: handlerMux,
+	}
 	fmt.Println("CSRF attack server running on :7070")
-	http.ListenAndServe(":7070", nil)
+	log.Default().Fatal(server.ListenAndServe())
 }
 
 // handleHome serves a page that demonstrates a CSRF attack. It contains a form that submits a POST request to the vulnerable /transfer endpoint.

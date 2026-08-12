@@ -42,14 +42,14 @@ import (
 	uuid "github.com/google/uuid"
 )
 
-func addHelloHandler() {
-	http.HandleFunc("/hello", func(w http.ResponseWriter, req *http.Request) {
+func addHelloHandler(handlerMux *http.ServeMux) {
+	handlerMux.HandleFunc("/hello", func(w http.ResponseWriter, req *http.Request) {
 		io.WriteString(w, "Hello, World!\n")
 	})
 }
 
-func addCountHandler() {
-	http.HandleFunc("/count", func(w http.ResponseWriter, req *http.Request) {
+func addCountHandler(handlerMux *http.ServeMux) {
+	handlerMux.HandleFunc("/count", func(w http.ResponseWriter, req *http.Request) {
 		count := 0
 		if c, err := req.Cookie("count"); err == nil {
 			if count, err = strconv.Atoi(c.Value); err != nil {
@@ -71,9 +71,9 @@ func addCountHandler() {
 	})
 }
 
-func addSessionHandler() {
+func addSessionHandler(handlerMux *http.ServeMux) {
 	cmap := map[string]int{}
-	http.HandleFunc("/session", func(w http.ResponseWriter, req *http.Request) {
+	handlerMux.HandleFunc("/session", func(w http.ResponseWriter, req *http.Request) {
 		uid := ""
 		if cookie, err := req.Cookie("session"); err != nil {
 			uid = uuid.NewString()
@@ -96,9 +96,9 @@ func addSessionHandler() {
 	})
 }
 
-func addBasicAuthHandler() {
+func addBasicAuthHandler(handlerMux *http.ServeMux) {
 	pmap := map[string]string{"jdoe": "password"}
-	http.HandleFunc("/basicauth", func(w http.ResponseWriter, req *http.Request) {
+	handlerMux.HandleFunc("/basicauth", func(w http.ResponseWriter, req *http.Request) {
 		if u, p, ok := req.BasicAuth(); ok {
 			if pmap[u] == p {
 				str := fmt.Sprintf("User %s authenticated.", u)
@@ -117,11 +117,11 @@ func addBasicAuthHandler() {
 	})
 }
 
-func addFormBasedAuthHandler() {
+func addFormBasedAuthHandler(handlerMux *http.ServeMux) {
 	smap := map[string]string{}
 	pmap := map[string]string{"jdoe": "password"}
 
-	http.HandleFunc("/login", func(w http.ResponseWriter, req *http.Request) {
+	handlerMux.HandleFunc("/login", func(w http.ResponseWriter, req *http.Request) {
 		form := `<form method="GET" enctype="application/x-www-form-urlencoded">
               <label for="user">Username:</label><br>
               <input type="text" id="user" name="user"><br>
@@ -156,7 +156,7 @@ func addFormBasedAuthHandler() {
 		}
 	})
 
-	http.HandleFunc("/resource", func(w http.ResponseWriter, req *http.Request) {
+	handlerMux.HandleFunc("/resource", func(w http.ResponseWriter, req *http.Request) {
 		if cookie, err := req.Cookie("session"); err != nil {
 			w.Header().Add("Location", "/login")
 			w.WriteHeader(http.StatusFound)
@@ -175,8 +175,8 @@ func addFormBasedAuthHandler() {
 	})
 }
 
-func addCSRFVulnerableHandler() {
-	http.HandleFunc("/transfer", func(w http.ResponseWriter, req *http.Request) {
+func addCSRFVulnerableHandler(handlerMux *http.ServeMux) {
+	handlerMux.HandleFunc("/transfer", func(w http.ResponseWriter, req *http.Request) {
 		// Check session validity
 		if _, err := req.Cookie("session"); err != nil {
 			w.WriteHeader(http.StatusUnauthorized)
@@ -207,9 +207,9 @@ func addCSRFVulnerableHandler() {
 	})
 }
 
-func addCSRFSafeHandler() {
+func addCSRFSafeHandler(handlerMux *http.ServeMux) {
 	csrfTokens := map[string]string{}
-	http.HandleFunc("/transfer-safe", func(w http.ResponseWriter, req *http.Request) {
+	handlerMux.HandleFunc("/transfer-safe", func(w http.ResponseWriter, req *http.Request) {
 		// Check session validity
 		var cookie *http.Cookie
 		var err error
@@ -260,12 +260,21 @@ func addCSRFSafeHandler() {
 }
 
 func main() {
-	addHelloHandler()
-	addCountHandler()
-	addSessionHandler()
-	addBasicAuthHandler()
-	addFormBasedAuthHandler()
-	addCSRFVulnerableHandler()
-	addCSRFSafeHandler()
-	log.Fatal(http.ListenAndServe(":8080", nil))
+	handlerMux := http.NewServeMux()
+	if handlerMux == nil {
+		log.Fatal("Failed to create handler mux")
+	}
+	addHelloHandler(handlerMux)
+	addCountHandler(handlerMux)
+	addSessionHandler(handlerMux)
+	addBasicAuthHandler(handlerMux)
+	addFormBasedAuthHandler(handlerMux)
+	addCSRFVulnerableHandler(handlerMux)
+	addCSRFSafeHandler(handlerMux)
+	server := &http.Server{
+		Addr:    ":8080",
+		Handler: handlerMux,
+	}
+	fmt.Println("Server running on :8080")
+	log.Default().Fatal(server.ListenAndServe())
 }
