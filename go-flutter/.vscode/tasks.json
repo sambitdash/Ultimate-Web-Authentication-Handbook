@@ -80,10 +80,11 @@
         "command": "echo 'ERROR: This script must be run inside a WSL window!'; exit 1"
       },
       "linux": {
-        "command": "echo '${input:sudoPassword}' | sudo -S apt-get update && echo '${input:sudoPassword}' | sudo -S apt-get install -y g++ libdlib-dev libblas-dev libatlas-base-dev liblapack-base-dev liblapack-dev libjpeg-turbo8-dev && flutter build web",
+        "command": "sudo apt-get update && sudo apt-get install -y g++ libdlib-dev libblas-dev libatlas-base-dev liblapack-dev libjpeg-turbo8-dev && flutter build web",
         "options": {
           "cwd": "${workspaceFolder}/chapter-10/frontend"
-        }
+        },
+        "console": "externalTerminal"
       },
       "problemMatcher": [],
       "presentation": {
