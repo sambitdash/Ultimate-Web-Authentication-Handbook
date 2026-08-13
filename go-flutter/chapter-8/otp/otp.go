@@ -50,7 +50,7 @@ import (
 	"howa.in/common"
 )
 
-func setupTLSServer(srvName string) *http.Server {
+func setupTLSServer(srvName string) (*http.Server, *http.ServeMux) {
 	cert, err := common.GetTLSCert(
 		"../certs/scas.crt",
 		fmt.Sprintf("../certs/%s.crt", srvName),
@@ -66,13 +66,15 @@ func setupTLSServer(srvName string) *http.Server {
 		Certificates: []tls.Certificate{*cert},
 	}
 
+	mux := http.NewServeMux()
 	return &http.Server{
 		Addr:      ":8443",
 		TLSConfig: tlsConfig,
-	}
+		Handler:   mux,
+	}, mux
 }
 
-func addOtpHandlers() {
+func addOtpHandlers(mux *http.ServeMux) {
 	type _userData struct {
 		Type    string
 		Secret  string
@@ -86,7 +88,7 @@ func addOtpHandlers() {
 		},
 	}
 
-	http.HandleFunc("/register", func(w http.ResponseWriter, r *http.Request) {
+	mux.HandleFunc("/register", func(w http.ResponseWriter, r *http.Request) {
 		username := r.FormValue("username")
 		if username == "" {
 			http.Error(w, "invalid username", http.StatusBadRequest)
@@ -150,7 +152,7 @@ func addOtpHandlers() {
 		}
 	})
 
-	http.HandleFunc("/validate", func(w http.ResponseWriter, r *http.Request) {
+	mux.HandleFunc("/validate", func(w http.ResponseWriter, r *http.Request) {
 		username := r.FormValue("username")
 		otp := r.FormValue("otp")
 		if username == "" || otp == "" {
@@ -183,10 +185,10 @@ func addOtpHandlers() {
 }
 
 func main() {
-	addOtpHandlers()
-	http.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
+	server, mux := setupTLSServer("mysrv.local")
+	mux.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
 		http.FileServer(http.Dir("frontend/build/web")).ServeHTTP(w, r)
 	})
-	server := setupTLSServer("mysrv.local")
+	addOtpHandlers(mux)
 	log.Default().Fatal(server.ListenAndServeTLS("", ""))
 }
