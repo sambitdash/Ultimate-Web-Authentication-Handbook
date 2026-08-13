@@ -14,3 +14,5 @@ python-js/chapter-4/*/*.xml
 *.sqlite3
 .python-version
 __debug*
+**/chapter-8/integrated/images/*
+**/chapter-10/testdata/*
