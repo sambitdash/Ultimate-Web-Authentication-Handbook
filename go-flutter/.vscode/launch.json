@@ -136,82 +136,92 @@
       "preLaunchTask": "ch5 hr delay frontend"
     },
     {
-      "name": "ch5 github authcode",
-      "cwd": "${workspaceFolder}/chapter-5/github",
+      "name": "ch6 github authcode",
+      "cwd": "${workspaceFolder}/chapter-6/github",
       "request": "launch",
       "type": "go",
       "mode": "debug",
-      "program": "${workspaceFolder}/chapter-5/github/authcode.go",
-      "preLaunchTask": "ch5 github frontend",
+      "program": "${workspaceFolder}/chapter-6/github/authcode.go",
+      "preLaunchTask": "ch6 github frontend",
       "env": {
         "GH_CLIENT_ID": "",
         "GH_CLIENT_SECRET": ""
       }
     },
     {
-      "name": "ch5 github device",
-      "cwd": "${workspaceFolder}/chapter-5/github",
+      "name": "ch6 github device",
+      "cwd": "${workspaceFolder}/chapter-6/github",
       "request": "launch",
       "type": "go",
       "mode": "debug",
-      "program": "${workspaceFolder}/chapter-5/github/device.go",
+      "program": "${workspaceFolder}/chapter-6/github/device.go",
       "env": {
         "GH_CLIENT_ID": ""
       }
     },  
     {
-      "name": "ch5 idp",
-      "cwd": "${workspaceFolder}/chapter-5/idp",
+      "name": "ch6 idp",
+      "cwd": "${workspaceFolder}/chapter-6/idp",
       "request": "launch",
       "type": "go",
       "mode": "debug",
-      "program": "${workspaceFolder}/chapter-5/idp/idp.go"
+      "program": "${workspaceFolder}/chapter-6/idp/idp.go"
     },
     {
-      "name": "ch5 pkce resource",
-      "cwd": "${workspaceFolder}/chapter-5/pkce/resource",
+      "name": "ch6 pkce resource",
+      "cwd": "${workspaceFolder}/chapter-6/pkce/resource",
       "request": "launch",
       "type": "go",
       "mode": "debug",
-      "program": "${workspaceFolder}/chapter-5/pkce/resource/server.go"
+      "program": "${workspaceFolder}/chapter-6/pkce/resource/server.go"
     },
     {
-      "name": "ch5 pkce client",
-      "cwd": "${workspaceFolder}/chapter-5/pkce/client",
+      "name": "ch6 pkce client",
+      "cwd": "${workspaceFolder}/chapter-6/pkce/client",
       "request": "launch",
-      "type": "dart"
+      "type": "dart",
+      "preLaunchTask": "ch6 pkce frontend"
     },
     {
-      "name": "ch5 google oidc",
-      "cwd": "${workspaceFolder}/chapter-5/google",
+      "name": "ch7 google oidc",
+      "cwd": "${workspaceFolder}/chapter-7/google",
       "request": "launch",
       "type": "go",
       "mode": "debug",
-      "program": "${workspaceFolder}/chapter-5/google/oidc.go",
-      "preLaunchTask": "ch5 google frontend",
+      "program": "${workspaceFolder}/chapter-7/google/oidc.go",
+      "preLaunchTask": "ch7 google frontend",
       "env": {
         "GOOGLE_CLIENT_ID": "",
         "GOOGLE_CLIENT_SECRET": ""
       }
     },
     {
-      "name": "ch6 otp",
-      "cwd": "${workspaceFolder}/chapter-6/otp",
+      "name": "ch8 otp",
+      "cwd": "${workspaceFolder}/chapter-8/otp",
       "request": "launch",
       "type": "go",
       "mode": "debug",
-      "program": "${workspaceFolder}/chapter-6/otp/otp.go",
-      "preLaunchTask": "ch6 otp frontend"
+      "program": "${workspaceFolder}/chapter-8/otp/otp.go",
+      "preLaunchTask": "ch8 otp frontend"
     },
     {
-      "name": "ch6 webauthn",
-      "cwd": "${workspaceFolder}/chapter-6/webauthn",
+      "name": "ch9 webauthn",
+      "cwd": "${workspaceFolder}/chapter-9/webauthn",
       "request": "launch",
       "type": "go",
       "mode": "debug",
-      "program": "${workspaceFolder}/chapter-6/webauthn/webauthn.go",
-      "preLaunchTask": "ch6 webauthn frontend"
+      "program": "${workspaceFolder}/chapter-9/webauthn/webauthn.go",
+      "preLaunchTask": "ch9 webauthn frontend"
     },
+    {
+      "name": "ch10 faceauth",
+      "cwd": "${workspaceFolder}/chapter-10",
+      "request": "launch",
+      "type": "go",
+      "mode": "debug",
+      "program": "${workspaceFolder}/chapter-10/face.go",
+      "preLaunchTask": "ch10 frontend"
+    }
   ],
   "compounds": [
     {
@@ -231,8 +241,8 @@
       "configurations": ["ch5 idp", "ch5 hr", "ch5 finance"]
     },            
     {
-      "name": "ch5 pkce",
-      "configurations": ["ch5 idp", "ch5 pkce client", "ch5 pkce resource"]
+      "name": "ch6 pkce",
+      "configurations": ["ch6 idp", "ch6 pkce client", "ch6 pkce resource"]
     }
   ]
 }

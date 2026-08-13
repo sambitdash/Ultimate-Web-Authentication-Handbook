@@ -32,11 +32,11 @@
       "options": {"cwd": "${workspaceFolder}/chapter-5/finance/frontend"},
     },
     {
-      "label": "ch5 idp frontend",
+      "label": "ch6 idp frontend",
       "command": "flutter",
       "args": ["build", "web"],
       "type": "shell",
-      "options": {"cwd": "${workspaceFolder}/chapter-5/idp/frontend"},
+      "options": {"cwd": "${workspaceFolder}/chapter-6/idp/frontend"},
     },     
     {
       "label": "ch6 github frontend",
@@ -46,39 +46,58 @@
       "options": {"cwd": "${workspaceFolder}/chapter-6/github/frontend"},
     },
     {
-      "label": "ch5 google frontend",
+      "label": "ch7 google frontend",
       "command": "flutter",
       "args": ["build", "web"],
       "type": "shell",
-      "options": {"cwd": "${workspaceFolder}/chapter-5/google/frontend"},
+      "options": {"cwd": "${workspaceFolder}/chapter-7/google/frontend"},
     },  
     {
-      "label": "ch6 otp frontend",
+      "label": "ch8 otp frontend",
       "command": "flutter",
       "args": ["build", "web"],
       "type": "shell",
-      "options": {"cwd": "${workspaceFolder}/chapter-6/otp/frontend"},
+      "options": {"cwd": "${workspaceFolder}/chapter-8/otp/frontend"},
     },
     {
-      "label": "ch6 webauthn frontend",
+      "label": "ch9 webauthn frontend",
       "command": "flutter",
       "args": ["build", "web"],
       "type": "shell",
-      "options": {"cwd": "${workspaceFolder}/chapter-6/webauthn/frontend"},
+      "options": {"cwd": "${workspaceFolder}/chapter-9/webauthn/frontend"},
     },
     {
-      "label": "ch6 integrated frontend",
+      "label": "ch9 integrated frontend",
       "command": "flutter",
       "args": ["build", "web"],
       "type": "shell",
-      "options": {"cwd": "${workspaceFolder}/chapter-6/integrated/mysrvfront"},
+      "options": {"cwd": "${workspaceFolder}/chapter-9/integrated/mysrvfront"},
     },
     {
-      "label": "ch7 frontend",
-      "command": "flutter",
-      "args": ["build", "web"],
+      "label": "ch10 frontend",
       "type": "shell",
-      "options": {"cwd": "${workspaceFolder}/chapter-7/frontend"},
+      "windows": {
+        "command": "echo 'ERROR: This script must be run inside a WSL window!'; exit 1"
+      },
+      "linux": {
+        "command": "echo '${input:sudoPassword}' | sudo -S apt-get update && echo '${input:sudoPassword}' | sudo -S apt-get install -y g++ libdlib-dev libblas-dev libatlas-base-dev liblapack-base-dev liblapack-dev libjpeg-turbo8-dev && flutter build web",
+        "options": {
+          "cwd": "${workspaceFolder}/chapter-10/frontend"
+        }
+      },
+      "problemMatcher": [],
+      "presentation": {
+        "reveal": "always",
+        "panel": "shared"
+      }
     },
+  ],
+  "inputs": [
+    {
+      "id": "sudoPassword",
+      "description": "Enter your Linux sudo password",
+      "type": "promptString",
+      "password": true
+    }
   ]
 }
