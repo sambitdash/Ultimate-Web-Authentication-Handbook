@@ -30,7 +30,7 @@ import (
 	"golang.org/x/crypto/pbkdf2"
 )
 
-func addBasicAuthHandler() {
+func addBasicAuthHandler(handlerMux *http.ServeMux) {
 	var pmap map[string]string
 	if jsonFile, err := os.Open("password.json"); err == nil {
 		byteValue, _ := io.ReadAll(jsonFile)
@@ -39,7 +39,7 @@ func addBasicAuthHandler() {
 	} else {
 		log.Fatal(err)
 	}
-	http.HandleFunc("/basicauth", func(w http.ResponseWriter, req *http.Request) {
+	handlerMux.HandleFunc("/basicauth", func(w http.ResponseWriter, req *http.Request) {
 		if u, p, ok := req.BasicAuth(); ok {
 			dk := hex.EncodeToString(pbkdf2.Key([]byte(p), []byte("12345678"), 4096, 20, sha1.New))
 			if pmap[u] == dk {
@@ -60,6 +60,15 @@ func addBasicAuthHandler() {
 }
 
 func main() {
-	addBasicAuthHandler()
-	log.Fatal(http.ListenAndServe(":8080", nil))
+	handlerMux := http.NewServeMux()
+	if handlerMux == nil {
+		log.Fatal("Failed to create handler mux")
+	}
+	addBasicAuthHandler(handlerMux)
+	server := &http.Server{
+		Addr:    ":8080",
+		Handler: handlerMux,
+	}
+	fmt.Println("Server running on :8080")
+	log.Default().Fatal(server.ListenAndServe())
 }
