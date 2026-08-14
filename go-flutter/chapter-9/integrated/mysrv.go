@@ -1,5 +1,5 @@
 /*
-Chapter-6: Multifactor Authentication
+Chapter-9: Multifactor Authentication
 Ultimate Web Authentication Handbook by Sambit Kumar Dash
 
 This demo shows how to run an OAuth 2 server with TOTP and WebAuthn as
@@ -19,7 +19,7 @@ flutter build web
 
 Start the server with the command: go run ./mysrv.go
 
-The website runs at https://idp.local:8444/
+The website runs at https://mysrv.local:8444/
 
 You will need to run the IDP and the SP simultaneously.
 
@@ -42,7 +42,7 @@ import (
 	"howa.in/common"
 )
 
-func addOAuthHandlers() {
+func addOAuthResServerHandlers(mux *http.ServeMux) {
 	httpsclient, err := common.GetHTTPSClient("../certs/sroot.crt")
 	if err != nil {
 		log.Default().Fatal(err)
@@ -56,7 +56,7 @@ func addOAuthHandlers() {
 		},
 	}
 
-	http.HandleFunc("/oauth/login", func(w http.ResponseWriter, req *http.Request) {
+	mux.HandleFunc("/oauth/login", func(w http.ResponseWriter, req *http.Request) {
 		store, _ := session.Start(req.Context(), w, req)
 		guid := uuid.New().String()
 		store.Set("state", guid)
@@ -72,7 +72,7 @@ func addOAuthHandlers() {
 		http.Redirect(w, req, url, http.StatusFound)
 	})
 
-	http.HandleFunc("/oauth/callback", func(w http.ResponseWriter, req *http.Request) {
+	mux.HandleFunc("/oauth/callback", func(w http.ResponseWriter, req *http.Request) {
 		state := req.FormValue("state")
 
 		store, _ := session.Start(req.Context(), w, req)
@@ -109,7 +109,7 @@ func addOAuthHandlers() {
 		}
 	})
 
-	http.HandleFunc("/oauth/logout", func(w http.ResponseWriter, req *http.Request) {
+	mux.HandleFunc("/oauth/logout", func(w http.ResponseWriter, req *http.Request) {
 		store, _ := session.Start(req.Context(), w, req)
 		log.Println("Logging out the user")
 		ti := store.Delete("token")
@@ -123,7 +123,7 @@ func addOAuthHandlers() {
 		}
 	})
 
-	http.HandleFunc("/resource", func(w http.ResponseWriter, r *http.Request) {
+	mux.HandleFunc("/resource", func(w http.ResponseWriter, r *http.Request) {
 		store, _ := session.Start(r.Context(), w, r)
 		token, ok := store.Get("token")
 		if !ok {
@@ -160,14 +160,15 @@ func addOAuthHandlers() {
 }
 
 func main() {
-	addOAuthHandlers()
-	http.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
+	server, mux := getTLSServer("mysrv.local", "8444")
+	addOAuthResServerHandlers(mux)
+	mux.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
 		http.FileServer(http.Dir("mysrvfront/build/web")).ServeHTTP(w, r)
 	})
-	startTLSServer("mysrv.local", "8444")
+	log.Default().Fatal(server.ListenAndServeTLS("", ""))
 }
 
-func startTLSServer(srvName string, port string) {
+func getTLSServer(srvName string, port string) (*http.Server, *http.ServeMux) {
 	cert, err := common.GetTLSCert(
 		"../certs/scas.crt",
 		fmt.Sprintf("../certs/%s.crt", srvName),
@@ -183,10 +184,10 @@ func startTLSServer(srvName string, port string) {
 		Certificates: []tls.Certificate{*cert},
 	}
 
-	server := http.Server{
+	mux := http.NewServeMux()
+	return &http.Server{
 		Addr:      ":" + port,
 		TLSConfig: tlsConfig,
-	}
-
-	log.Default().Fatal(server.ListenAndServeTLS("", ""))
+		Handler:   mux,
+	}, mux
 }

@@ -198,7 +198,7 @@ func applyLoginPolicy(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
-func addOAuthHandlers() {
+func addOAuthIdPHandlers(mux *http.ServeMux) {
 	manager := manage.NewDefaultManager()
 	manager.SetAuthorizeCodeTokenCfg(&manage.Config{
 		AccessTokenExp:    time.Second * 30,
@@ -285,7 +285,7 @@ func addOAuthHandlers() {
 		log.Println("Response Error:", re.Error.Error())
 	})
 
-	http.HandleFunc("/login", func(w http.ResponseWriter, r *http.Request) {
+	mux.HandleFunc("/login", func(w http.ResponseWriter, r *http.Request) {
 		dump(r, "/login")
 		var (
 			store sess.Store
@@ -322,7 +322,7 @@ func addOAuthHandlers() {
     `))
 	})
 
-	http.HandleFunc("/password", func(w http.ResponseWriter, r *http.Request) {
+	mux.HandleFunc("/password", func(w http.ResponseWriter, r *http.Request) {
 		dump(r, "/password")
 		var (
 			store sess.Store
@@ -360,7 +360,7 @@ func addOAuthHandlers() {
     `))
 	})
 
-	http.HandleFunc("/logout", func(w http.ResponseWriter, r *http.Request) {
+	mux.HandleFunc("/logout", func(w http.ResponseWriter, r *http.Request) {
 		dump(r, "/logout")
 		_, err := srv.ValidationBearerToken(r)
 		if err == nil {
@@ -369,7 +369,7 @@ func addOAuthHandlers() {
 		http.Redirect(w, r, "https://mysrv.local:8444", http.StatusFound)
 	})
 
-	http.HandleFunc("/auth", func(w http.ResponseWriter, r *http.Request) {
+	mux.HandleFunc("/auth", func(w http.ResponseWriter, r *http.Request) {
 		dump(r, "/auth")
 		store, err := sess.Start(r.Context(), w, r)
 		if err != nil {
@@ -393,7 +393,7 @@ func addOAuthHandlers() {
       </body></html>`))
 	})
 
-	http.HandleFunc("/oauth/authorize",
+	mux.HandleFunc("/oauth/authorize",
 		func(w http.ResponseWriter, r *http.Request) {
 			dump(r, "/oauth/authorize")
 			store, err := sess.Start(r.Context(), w, r)
@@ -416,7 +416,7 @@ func addOAuthHandlers() {
 		},
 	)
 
-	http.HandleFunc("/oauth/token", func(w http.ResponseWriter, r *http.Request) {
+	mux.HandleFunc("/oauth/token", func(w http.ResponseWriter, r *http.Request) {
 		dump(r, "/oauth/token")
 		err := srv.HandleTokenRequest(w, r)
 		if err != nil {
@@ -424,7 +424,7 @@ func addOAuthHandlers() {
 		}
 	})
 
-	http.HandleFunc("/test", func(w http.ResponseWriter, r *http.Request) {
+	mux.HandleFunc("/test", func(w http.ResponseWriter, r *http.Request) {
 		dump(r, "/test")
 		token, err := srv.ValidationBearerToken(r)
 		if err != nil {
@@ -446,7 +446,7 @@ func addOAuthHandlers() {
 	})
 }
 
-func addWebAuthnHandlers() {
+func addWebAuthnHandlers(mux *http.ServeMux) {
 	wauthn, err := webauthn.New(&webauthn.Config{
 		RPDisplayName: "HOWA Webauthn",
 		RPID:          "idp.local",
@@ -610,7 +610,7 @@ func addWebAuthnHandlers() {
 		}
 	}
 
-	http.HandleFunc("/webauthn/register",
+	mux.HandleFunc("/webauthn/register",
 		func(w http.ResponseWriter, r *http.Request) {
 			dump(r, "/webauthn/register")
 			_handler(w, r, true,
@@ -659,7 +659,7 @@ func addWebAuthnHandlers() {
 			)
 		})
 
-	http.HandleFunc("/webauthn/login",
+	mux.HandleFunc("/webauthn/login",
 		func(w http.ResponseWriter, r *http.Request) {
 			dump(r, "/webauthn/login")
 			_handler(w, r, false,
@@ -695,7 +695,7 @@ func addWebAuthnHandlers() {
 		})
 }
 
-func addTOTPHandlers() {
+func addTOTPHandlers(mux *http.ServeMux) {
 	_generateSecret := func(username string) (secret string,
 		imgpath string, err error,
 	) {
@@ -743,7 +743,7 @@ func addTOTPHandlers() {
   `, username, imgpath, secret)
 	}
 
-	http.HandleFunc("/otp/register",
+	mux.HandleFunc("/otp/register",
 		func(w http.ResponseWriter, r *http.Request) {
 			dump(r, "/otp/register")
 			store, err := sess.Start(r.Context(), w, r)
@@ -809,7 +809,7 @@ func addTOTPHandlers() {
   `, username)
 	}
 
-	http.HandleFunc("/otp/validate",
+	mux.HandleFunc("/otp/validate",
 		func(w http.ResponseWriter, r *http.Request) {
 			dump(r, "/otp/validate")
 			defer applyLoginPolicy(w, r)
@@ -847,22 +847,23 @@ func addTOTPHandlers() {
 		})
 }
 
-func addStaticRoutes() {
-	http.HandleFunc("/images/", func(w http.ResponseWriter, r *http.Request) {
+func addStaticRoutes(mux *http.ServeMux) {
+	mux.HandleFunc("/images/", func(w http.ResponseWriter, r *http.Request) {
 		http.StripPrefix("/images/",
 			http.FileServer(http.Dir("images"))).ServeHTTP(w, r)
 	})
 }
 
 func main() {
-	addOAuthHandlers()
-	addWebAuthnHandlers()
-	addTOTPHandlers()
-	addStaticRoutes()
-	startTLSServer("idp.local", "8443")
+	server, mux := getTLSServer("idp.local", "8443")
+	addOAuthIdPHandlers(mux)
+	addWebAuthnHandlers(mux)
+	addTOTPHandlers(mux)
+	addStaticRoutes(mux)
+	log.Default().Fatal(server.ListenAndServeTLS("", ""))
 }
 
-func startTLSServer(srvName string, port string) {
+func getTLSServer(srvName string, port string) (*http.Server, *http.ServeMux) {
 	cert, err := common.GetTLSCert(
 		"../certs/scas.crt",
 		fmt.Sprintf("../certs/%s.crt", srvName),
@@ -877,11 +878,10 @@ func startTLSServer(srvName string, port string) {
 		MinVersion:   tls.VersionTLS13,
 		Certificates: []tls.Certificate{*cert},
 	}
-
-	server := http.Server{
+	mux := http.NewServeMux()
+	return &http.Server{
 		Addr:      ":" + port,
 		TLSConfig: tlsConfig,
-	}
-
-	log.Default().Fatal(server.ListenAndServeTLS("", ""))
+		Handler:   mux,
+	}, mux
 }

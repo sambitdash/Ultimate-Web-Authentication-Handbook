@@ -214,6 +214,23 @@
       "preLaunchTask": "ch9 webauthn frontend"
     },
     {
+      "name": "ch9 integrated mysrv",
+      "cwd": "${workspaceFolder}/chapter-9/integrated",
+      "request": "launch",
+      "type": "go",
+      "mode": "debug",
+      "program": "${workspaceFolder}/chapter-9/integrated/mysrv.go",
+      "preLaunchTask": "ch9 integrated frontend"
+    },
+    {
+      "name": "ch9 integrated idp",
+      "cwd": "${workspaceFolder}/chapter-9/integrated",
+      "request": "launch",
+      "type": "go",
+      "mode": "debug",
+      "program": "${workspaceFolder}/chapter-9/integrated/idp.go"
+    },        
+    {
       "name": "ch10 faceauth",
       "cwd": "${workspaceFolder}/chapter-10",
       "request": "launch",
@@ -243,6 +260,10 @@
     {
       "name": "ch6 pkce",
       "configurations": ["ch6 idp", "ch6 pkce client", "ch6 pkce resource"]
+    },
+    {
+      "name": "ch9 integrated",
+      "configurations": ["ch9 integrated mysrv", "ch9 integrated idp"]
     }
   ]
 }
