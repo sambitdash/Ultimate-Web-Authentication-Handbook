@@ -52,7 +52,7 @@ import (
 	"howa.in/common"
 )
 
-func setupTLSServer(srvName string) *http.Server {
+func setupTLSServer(srvName string) (*http.Server, *http.ServeMux) {
 	cert, err := common.GetTLSCert(
 		"../certs/scas.crt",
 		fmt.Sprintf("../certs/%s.crt", srvName),
@@ -68,10 +68,12 @@ func setupTLSServer(srvName string) *http.Server {
 		Certificates: []tls.Certificate{*cert},
 	}
 
+	mux := http.NewServeMux()
 	return &http.Server{
 		Addr:      ":8443",
 		TLSConfig: tlsConfig,
-	}
+		Handler:   mux,
+	}, mux
 }
 
 type userImpl struct {
@@ -139,7 +141,7 @@ func (d DataStore) GetSession(state string) *webauthn.SessionData {
 	return d[state].(*webauthn.SessionData)
 }
 
-func addWebAuthnHandlers() {
+func addWebAuthnHandlers(mux *http.ServeMux) {
 	datastore := DataStore{}
 
 	wconfig := &webauthn.Config{
@@ -159,7 +161,7 @@ func addWebAuthnHandlers() {
 		w.Write(jsonResp)
 	}
 
-	http.HandleFunc("/webauthn/register/begin", func(w http.ResponseWriter, r *http.Request) {
+	mux.HandleFunc("/webauthn/register/begin", func(w http.ResponseWriter, r *http.Request) {
 		username := r.FormValue("username")
 		if username == "" {
 			http.Error(w, "invalid username", http.StatusBadRequest)
@@ -202,7 +204,7 @@ func addWebAuthnHandlers() {
 		log.Printf("Sending registration information for user: %s state: %s", username, state)
 	})
 
-	http.HandleFunc("/webauthn/register/finish", func(w http.ResponseWriter, r *http.Request) {
+	mux.HandleFunc("/webauthn/register/finish", func(w http.ResponseWriter, r *http.Request) {
 		username := r.FormValue("username")
 		if username == "" {
 			http.Error(w, "invalid username", http.StatusBadRequest)
@@ -257,7 +259,7 @@ func addWebAuthnHandlers() {
 		log.Printf("User: %s registered a WebAuthn credential.", username)
 	})
 
-	http.HandleFunc("/webauthn/login/begin", func(w http.ResponseWriter, r *http.Request) {
+	mux.HandleFunc("/webauthn/login/begin", func(w http.ResponseWriter, r *http.Request) {
 		username := r.FormValue("username")
 		if username == "" {
 			http.Error(w, "invalid username", http.StatusBadRequest)
@@ -289,7 +291,7 @@ func addWebAuthnHandlers() {
 		log.Printf("Sending login information for user: %s state: %s", username, state)
 	})
 
-	http.HandleFunc("/webauthn/login/finish", func(w http.ResponseWriter, r *http.Request) {
+	mux.HandleFunc("/webauthn/login/finish", func(w http.ResponseWriter, r *http.Request) {
 		username := r.FormValue("username")
 		if username == "" {
 			http.Error(w, "invalid username", http.StatusBadRequest)
@@ -343,10 +345,10 @@ func addWebAuthnHandlers() {
 }
 
 func main() {
-	addWebAuthnHandlers()
-	http.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
+	server, mux := setupTLSServer("mysrv.local")
+	addWebAuthnHandlers(mux)
+	mux.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
 		http.FileServer(http.Dir("frontend/build/web")).ServeHTTP(w, r)
 	})
-	server := setupTLSServer("mysrv.local")
 	log.Default().Fatal(server.ListenAndServeTLS("", ""))
 }
