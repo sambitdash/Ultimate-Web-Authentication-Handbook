@@ -49,7 +49,8 @@ import (
 
 var sploaded bool = false
 
-func setupTLSServer(srvName string) *http.Server {
+func setupTLSServer(srvName string) (*http.Server, *http.ServeMux) {
+	handlerMux := http.NewServeMux()
 	cert, err := common.GetTLSCert(
 		"certs/ssl/scas.crt",
 		fmt.Sprintf("certs/ssl/%s.crt", srvName),
@@ -68,7 +69,8 @@ func setupTLSServer(srvName string) *http.Server {
 	return &http.Server{
 		Addr:      ":8443",
 		TLSConfig: tlsConfig,
-	}
+		Handler:   handlerMux,
+	}, handlerMux
 }
 
 func addSP(httpsclient *http.Client, fn string, svcurl string, svcname string, mdurl string, scurl string) {
@@ -108,7 +110,6 @@ func addSP(httpsclient *http.Client, fn string, svcurl string, svcname string, m
 }
 
 func addServiceProviders(w http.ResponseWriter, r *http.Request) {
-
 	httpsclient, err := common.GetHTTPSClient("certs/ssl/scas.crt")
 	if err != nil {
 		log.Fatal(err)
@@ -184,7 +185,7 @@ func addUsers(idpServer *samlidp.Server) {
 	})
 }
 
-func addIDPAuth(idpServer *samlidp.Server, key *rsa.PrivateKey, cert *x509.Certificate) {
+func addIDPAuth(mux *http.ServeMux, idpServer *samlidp.Server, key *rsa.PrivateKey, cert *x509.Certificate) {
 	rootURL, err := url.Parse("https://idp.local:8443/")
 	if err != nil {
 		log.Default().Fatalf("cannot parse base URL: %v", err)
@@ -200,8 +201,8 @@ func addIDPAuth(idpServer *samlidp.Server, key *rsa.PrivateKey, cert *x509.Certi
 	}); err != nil {
 		log.Default().Fatalf("Unable to start HR SP %v", err)
 	} else {
-		http.Handle("/saml/", idpAuth)
-		http.Handle("/auth/",
+		mux.Handle("/saml/", idpAuth)
+		mux.Handle("/auth/",
 			idpAuth.RequireAccount(
 				http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 					sProvider := idpAuth.Session
@@ -300,6 +301,8 @@ func main() {
 		log.Default().Fatalf("%v", err)
 	}
 
+	server, mux := setupTLSServer("idp.local")
+
 	if idpServer, err := samlidp.New(samlidp.Options{
 		URL:         *baseURL,
 		Key:         key,
@@ -313,8 +316,8 @@ func main() {
 		cors := cors.New(cors.Options{
 			AllowedOrigins: []string{"https://hr.mysrv.local:8444", "https://finance.mysrv.local:8445"},
 		})
-		http.Handle("/idp/", cors.Handler(http.StripPrefix("/idp", idpServer)))
-		http.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
+		mux.Handle("/idp/", cors.Handler(http.StripPrefix("/idp", idpServer)))
+		mux.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
 			http.SetCookie(w, &http.Cookie{
 				Name:     "sploaded",
 				Value:    strconv.FormatBool(sploaded),
@@ -324,9 +327,9 @@ func main() {
 			invalidateIDPSession(w, r, idpServer)
 			http.FileServer(http.Dir("frontend/build/web")).ServeHTTP(w, r)
 		})
-		http.HandleFunc("/addsps", addServiceProviders)
-		addIDPAuth(idpServer, key.(*rsa.PrivateKey), cert)
+		mux.HandleFunc("/addsps", addServiceProviders)
+		addIDPAuth(mux, idpServer, key.(*rsa.PrivateKey), cert)
 	}
-	server := setupTLSServer("idp.local")
+
 	log.Default().Fatal(server.ListenAndServeTLS("", ""))
 }

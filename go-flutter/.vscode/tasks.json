@@ -2,55 +2,43 @@
   "version": "2.0.0",
   "tasks": [
     {
-      "label": "ch5 hr frontend",
-      "command": "flutter",
-      "args": ["build", "web"],
-      "type": "shell",
-      "options": {"cwd": "${workspaceFolder}/chapter-5/hr/frontend"},
-    },
-    {
       "label": "ch5 hr delay frontend",
-      "command": "sleep",
-      "args": ["10"],
+      "command": "flutter build web && sleep 10",
       "type": "shell",
-      "dependsOn": "ch5 hr frontend",
-      "options": {"cwd": "${workspaceFolder}/chapter-5/hr/frontend"},
-    },
-    {
-      "label": "ch5 finance frontend",
-      "command": "flutter",
-      "args": ["build", "web"],
-      "type": "shell",
-      "options": {"cwd": "${workspaceFolder}/chapter-5/finance/frontend"},
+      "options": {"cwd": "${workspaceFolder}/chapter-5/hr/frontend"}
     },
     {
       "label": "ch5 finance delay frontend",
-      "command": "sleep",
-      "args": ["10"],
+      "command": "flutter build web && sleep 10",
       "type": "shell",
-      "dependsOn": "ch5 finance frontend",
-      "options": {"cwd": "${workspaceFolder}/chapter-5/finance/frontend"},
+      "options": {"cwd": "${workspaceFolder}/chapter-5/finance/frontend"}
+    },
+    {
+      "label": "ch5 idp frontend",
+      "command": "flutter build web",
+      "type": "shell",
+      "options": {"cwd": "${workspaceFolder}/chapter-5/idp/frontend"}
     },
     {
       "label": "ch6 idp frontend",
       "command": "flutter",
       "args": ["build", "web"],
       "type": "shell",
-      "options": {"cwd": "${workspaceFolder}/chapter-6/idp/frontend"},
+      "options": {"cwd": "${workspaceFolder}/chapter-6/idp/frontend"}
     },     
     {
       "label": "ch6 github frontend",
       "command": "flutter",
       "args": ["build", "web"],
       "type": "shell",
-      "options": {"cwd": "${workspaceFolder}/chapter-6/github/frontend"},
+      "options": {"cwd": "${workspaceFolder}/chapter-6/github/frontend"}
     },
     {
       "label": "ch7 google frontend",
       "command": "flutter",
       "args": ["build", "web"],
       "type": "shell",
-      "options": {"cwd": "${workspaceFolder}/chapter-7/google/frontend"},
+      "options": {"cwd": "${workspaceFolder}/chapter-7/google/frontend"}
     },  
     {
       "label": "ch8 otp frontend",
@@ -92,13 +80,5 @@
         "panel": "shared"
       }
     },
-  ],
-  "inputs": [
-    {
-      "id": "sudoPassword",
-      "description": "Enter your Linux sudo password",
-      "type": "promptString",
-      "password": true
-    }
   ]
 }

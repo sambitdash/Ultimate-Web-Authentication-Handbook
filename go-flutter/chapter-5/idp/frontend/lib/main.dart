@@ -143,7 +143,7 @@ class IDPHomePage extends StatelessWidget {
           var doc = XmlDocument.parse(row);
           var entityid = doc.children[0].getAttribute("entityID");
           return TableRow(
-            children: [Text(entityid == null ? "NA" : entityid)],
+            children: [Text(entityid ?? "NA")],
           );
         }
       case "sessions":
