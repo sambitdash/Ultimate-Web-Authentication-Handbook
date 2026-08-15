@@ -8,12 +8,12 @@ of a randomized string using the pbkdf2 function.
 Launch the application with the command:
 go run ./pbkdf.go password
 
-It produces the result: 1e69ed9b36e1a4231bb8d273090790d510f1404e
+It produces the result: 1b68bb6371ec338df4c02f0483fe618ff7470f18b78522e41e489182cc6d98b6
 */
 package main
 
 import (
-	"crypto/sha1"
+	"crypto/sha256"
 	"encoding/hex"
 	"os"
 
@@ -21,7 +21,7 @@ import (
 )
 
 func main() {
-	dk := pbkdf2.Key([]byte(os.Args[1]), []byte("12345678"), 4096, 20, sha1.New)
+	dk := pbkdf2.Key([]byte(os.Args[1]), []byte("12345678"), 600000, 32, sha256.New)
 	encodedString := hex.EncodeToString(dk)
 	println(encodedString)
 }

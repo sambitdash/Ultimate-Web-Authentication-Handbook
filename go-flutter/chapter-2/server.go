@@ -18,7 +18,7 @@ the password.json file.
 package main
 
 import (
-	"crypto/sha1"
+	"crypto/sha256"
 	"encoding/hex"
 	"encoding/json"
 	"fmt"
@@ -28,6 +28,8 @@ import (
 	"os"
 
 	"golang.org/x/crypto/pbkdf2"
+
+	"howa.in/common"
 )
 
 func addBasicAuthHandler(handlerMux *http.ServeMux) {
@@ -41,7 +43,7 @@ func addBasicAuthHandler(handlerMux *http.ServeMux) {
 	}
 	handlerMux.HandleFunc("/basicauth", func(w http.ResponseWriter, req *http.Request) {
 		if u, p, ok := req.BasicAuth(); ok {
-			dk := hex.EncodeToString(pbkdf2.Key([]byte(p), []byte("12345678"), 4096, 20, sha1.New))
+			dk := hex.EncodeToString(pbkdf2.Key([]byte(p), []byte("12345678"), 600000, 32, sha256.New))
 			if pmap[u] == dk {
 				str := fmt.Sprintf("User %s authenticated.", u)
 				io.WriteString(w, str)
@@ -60,15 +62,10 @@ func addBasicAuthHandler(handlerMux *http.ServeMux) {
 }
 
 func main() {
-	handlerMux := http.NewServeMux()
-	if handlerMux == nil {
-		log.Fatal("Failed to create handler mux")
+	server, handlerMux, err := common.SetupHTTPServer("", "8080")
+	if err != nil {
+		log.Default().Fatal(err)
 	}
 	addBasicAuthHandler(handlerMux)
-	server := &http.Server{
-		Addr:    ":8080",
-		Handler: handlerMux,
-	}
-	fmt.Println("Server running on :8080")
 	log.Default().Fatal(server.ListenAndServe())
 }

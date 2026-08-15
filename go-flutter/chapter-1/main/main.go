@@ -40,6 +40,8 @@ import (
 	"strconv"
 
 	uuid "github.com/google/uuid"
+
+	"howa.in/common"
 )
 
 func addHelloHandler(handlerMux *http.ServeMux) {
@@ -260,21 +262,17 @@ func addCSRFSafeHandler(handlerMux *http.ServeMux) {
 }
 
 func main() {
-	handlerMux := http.NewServeMux()
-	if handlerMux == nil {
-		log.Fatal("Failed to create handler mux")
+	if server, handlerMux, err := common.SetupHTTPServer("", "8080"); err == nil {
+		addHelloHandler(handlerMux)
+		addCountHandler(handlerMux)
+		addSessionHandler(handlerMux)
+		addBasicAuthHandler(handlerMux)
+		addFormBasedAuthHandler(handlerMux)
+		addCSRFVulnerableHandler(handlerMux)
+		addCSRFSafeHandler(handlerMux)
+		fmt.Println("Server running on :8080")
+		log.Default().Fatal(server.ListenAndServe())
+	} else {
+		log.Default().Fatal(err)
 	}
-	addHelloHandler(handlerMux)
-	addCountHandler(handlerMux)
-	addSessionHandler(handlerMux)
-	addBasicAuthHandler(handlerMux)
-	addFormBasedAuthHandler(handlerMux)
-	addCSRFVulnerableHandler(handlerMux)
-	addCSRFSafeHandler(handlerMux)
-	server := &http.Server{
-		Addr:    ":8080",
-		Handler: handlerMux,
-	}
-	fmt.Println("Server running on :8080")
-	log.Default().Fatal(server.ListenAndServe())
 }

@@ -9,19 +9,17 @@ import (
 	"io"
 	"log"
 	"net/http"
+
+	"howa.in/common"
 )
 
 func main() {
-	handlerMux := http.NewServeMux()
-	if handlerMux == nil {
-		log.Fatal("Failed to create handler mux")
+	server, handlerMux, err := common.SetupHTTPServer("", "7070")
+	if err != nil {
+		log.Default().Fatal(err)
 	}
 	handlerMux.HandleFunc("/", handleHome)
 	handlerMux.HandleFunc("/csrf-safe", handleSafe)
-	server := &http.Server{
-		Addr:    ":7070",
-		Handler: handlerMux,
-	}
 	fmt.Println("CSRF attack server running on :7070")
 	log.Default().Fatal(server.ListenAndServe())
 }
