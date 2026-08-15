@@ -40,16 +40,16 @@ import (
 	"howa.in/common"
 )
 
-func addHelloHandler() {
-	http.HandleFunc("/hello", func(w http.ResponseWriter, req *http.Request) {
+func addHelloHandler(handlerMux *http.ServeMux) {
+	handlerMux.HandleFunc("/hello", func(w http.ResponseWriter, req *http.Request) {
 		log.Default().Print("Sending: Hello, World!\n")
 		io.WriteString(w, "Hello, World!\n")
 	})
 }
 
-func addBasicAuthHandler() {
+func addBasicAuthHandler(handlerMux *http.ServeMux) {
 	pmap := map[string]string{"jdoe": "password"}
-	http.HandleFunc("/basicauth", func(w http.ResponseWriter, req *http.Request) {
+	handlerMux.HandleFunc("/basicauth", func(w http.ResponseWriter, req *http.Request) {
 		if u, p, ok := req.BasicAuth(); ok {
 			if pmap[u] == p {
 				str := fmt.Sprintf("User %s authenticated.", u)
@@ -68,9 +68,9 @@ func addBasicAuthHandler() {
 	})
 }
 
-func configureClientAuth(tlsConfig *tls.Config) error {
+func configureClientAuth(handlerMux *http.ServeMux, tlsConfig *tls.Config) error {
 	// Add certauth end point and handler
-	http.HandleFunc("/certauth", func(w http.ResponseWriter, req *http.Request) {
+	handlerMux.HandleFunc("/certauth", func(w http.ResponseWriter, req *http.Request) {
 		if req.TLS == nil || req.TLS.PeerCertificates == nil || len(req.TLS.PeerCertificates) <= 0 {
 			str := "No client certificates. User failed to authenticate."
 			w.WriteHeader(http.StatusUnauthorized)
@@ -103,8 +103,13 @@ func main() {
 	// Assign false to turnoff client auth
 	const CLIENT_AUTH = false
 
-	addHelloHandler()
-	addBasicAuthHandler()
+	handlerMux := http.NewServeMux()
+	if handlerMux == nil {
+		log.Fatal("Failed to create handler mux")
+	}
+
+	addHelloHandler(handlerMux)
+	addBasicAuthHandler(handlerMux)
 
 	cert, err := common.GetTLSCert(
 		"../certs/server/scas.crt",
@@ -122,7 +127,7 @@ func main() {
 	}
 
 	if CLIENT_AUTH {
-		if err := configureClientAuth(tlsConfig); err != nil {
+		if err := configureClientAuth(handlerMux, tlsConfig); err != nil {
 			log.Default().Fatal(err)
 		}
 	}
@@ -130,6 +135,7 @@ func main() {
 	server := &http.Server{
 		Addr:      ":8443",
 		TLSConfig: tlsConfig,
+		Handler:   handlerMux,
 	}
 
 	log.Default().Fatal(server.ListenAndServeTLS("", ""))
