@@ -14,7 +14,7 @@ import (
 )
 
 func main() {
-	server, handlerMux, err := common.SetupHTTPServer("", "7070")
+	server, handlerMux, err := common.SetupHTTPServer("localhost", "7070")
 	if err != nil {
 		log.Default().Fatal(err)
 	}

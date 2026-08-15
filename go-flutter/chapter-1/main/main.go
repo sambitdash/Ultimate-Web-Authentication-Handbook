@@ -262,7 +262,7 @@ func addCSRFSafeHandler(handlerMux *http.ServeMux) {
 }
 
 func main() {
-	if server, handlerMux, err := common.SetupHTTPServer("", "8080"); err == nil {
+	if server, handlerMux, err := common.SetupHTTPServer("localhost", "8080"); err == nil {
 		addHelloHandler(handlerMux)
 		addCountHandler(handlerMux)
 		addSessionHandler(handlerMux)

@@ -62,7 +62,7 @@ func addBasicAuthHandler(handlerMux *http.ServeMux) {
 }
 
 func main() {
-	server, handlerMux, err := common.SetupHTTPServer("", "8080")
+	server, handlerMux, err := common.SetupHTTPServer("localhost", "8080")
 	if err != nil {
 		log.Default().Fatal(err)
 	}

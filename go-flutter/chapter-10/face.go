@@ -28,6 +28,8 @@ import (
 
 	face "github.com/Kagami/go-face"
 	git "github.com/go-git/go-git/v5"
+
+	"howa.in/common"
 )
 
 func main() {
@@ -36,7 +38,7 @@ func main() {
 	modelspath := filepath.Join(testpath, "models")
 
 	log.Println("Downloading face data... It may take several minutes.")
-	os.Mkdir(testpath, 0750)
+	os.Mkdir(testpath, 0o750)
 
 	git.PlainClone(testpath, false, &git.CloneOptions{
 		URL: "https://github.com/Kagami/go-face-testdata",
@@ -50,11 +52,16 @@ func main() {
 	}
 	defer rec.Close()
 
-	http.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
+	server, mux, err := common.SetupHTTPServer("localhost", "8080")
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	mux.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
 		http.FileServer(http.Dir("frontend/build/web")).ServeHTTP(w, r)
 	})
 
-	http.HandleFunc("/compare", func(w http.ResponseWriter, r *http.Request) {
+	mux.HandleFunc("/compare", func(w http.ResponseWriter, r *http.Request) {
 		if r.ParseForm() == nil {
 			img1 := r.Form.Get("img1")
 			img2 := r.Form.Get("img2")
@@ -73,5 +80,5 @@ func main() {
 		}
 	})
 
-	log.Fatal(http.ListenAndServe(":8080", nil))
+	log.Fatal(server.ListenAndServe())
 }
