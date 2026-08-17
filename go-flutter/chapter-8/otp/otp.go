@@ -34,7 +34,6 @@ package main
 import (
 	"bytes"
 	"crypto/rand"
-	"crypto/tls"
 	"encoding/base32"
 	"encoding/base64"
 	"encoding/json"
@@ -49,30 +48,6 @@ import (
 
 	"howa.in/common"
 )
-
-func setupTLSServer(srvName string) (*http.Server, *http.ServeMux) {
-	cert, err := common.GetTLSCert(
-		"../certs/scas.crt",
-		fmt.Sprintf("../certs/%s.crt", srvName),
-		fmt.Sprintf("../certs/%s.key", srvName),
-		[]byte("password"))
-	if err != nil {
-		log.Default().Fatal(err)
-	}
-
-	tlsConfig := &tls.Config{
-		ServerName:   srvName,
-		MinVersion:   tls.VersionTLS13,
-		Certificates: []tls.Certificate{*cert},
-	}
-
-	mux := http.NewServeMux()
-	return &http.Server{
-		Addr:      ":8443",
-		TLSConfig: tlsConfig,
-		Handler:   mux,
-	}, mux
-}
 
 func addOtpHandlers(mux *http.ServeMux) {
 	type _userData struct {
@@ -185,10 +160,20 @@ func addOtpHandlers(mux *http.ServeMux) {
 }
 
 func main() {
-	server, mux := setupTLSServer("mysrv.local")
-	mux.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
-		http.FileServer(http.Dir("frontend/build/web")).ServeHTTP(w, r)
-	})
-	addOtpHandlers(mux)
-	log.Default().Fatal(server.ListenAndServeTLS("", ""))
+	if server, mux, err := common.SetupHTTPSServer(
+		"mysrv.local",
+		"8443",
+		"../certs/scas.crt",
+		"../certs/mysrv.local.crt",
+		"../certs/mysrv.local.key",
+		[]byte("password"),
+	); err == nil {
+		mux.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
+			http.FileServer(http.Dir("frontend/build/web")).ServeHTTP(w, r)
+		})
+		addOtpHandlers(mux)
+		log.Default().Fatal(server.ListenAndServeTLS("", ""))
+	} else {
+		log.Default().Fatal(err)
+	}
 }
