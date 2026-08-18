@@ -99,25 +99,24 @@ func GetTLSCert(capath, certpath, keypath string, keypass []byte) (c *tls.Certif
 }
 
 // SetupHTTPSServer creates an HTTPS server and mux configured for TLS 1.3.
-func SetupHTTPSServer(srvName string, capath string, certpath string,
-	keypath string, keypass []byte, port string,
+func SetupHTTPSServer(srvName string, port string,
+	capath string, certpath string,
+	keypath string, keypass []byte,
 ) (*http.Server, *http.ServeMux, error) {
 	cert, err := GetTLSCert(capath, certpath, keypath, keypass)
 	if err != nil {
 		return nil, nil, err
 	}
 
-	tlsConfig := &tls.Config{
-		ServerName:   srvName,
-		MinVersion:   tls.VersionTLS13,
-		Certificates: []tls.Certificate{*cert},
-	}
-
 	mux := http.NewServeMux()
 	return &http.Server{
-		Addr:      ":" + port,
-		TLSConfig: tlsConfig,
-		Handler:   mux,
+		Addr: ":" + port,
+		TLSConfig: &tls.Config{
+			ServerName:   srvName,
+			MinVersion:   tls.VersionTLS13,
+			Certificates: []tls.Certificate{*cert},
+		},
+		Handler: mux,
 	}, mux, nil
 }
 

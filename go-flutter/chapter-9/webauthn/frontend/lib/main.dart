@@ -1,12 +1,10 @@
-import 'dart:convert';
-import 'dart:typed_data';
-
 import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
-// ignore: avoid_web_libraries_in_flutter
-import 'dart:html';
-
+import 'package:web/web.dart' as web;
 import 'package:uuid/uuid.dart';
+import 'dart:convert';
+import 'dart:typed_data';
+import 'dart:js_interop';
 
 void main() {
   runApp(const WebAuthnApp());
@@ -84,12 +82,12 @@ Future<Map> httpPost(String path, Map<String, dynamic> params, Object? body) {
 }
 
 ByteBuffer str2buffer(String s) {
-  var r = 4 - s.length.remainder(4);
-  while (r > 0) {
-    s += "=";
-    r--;
-  }
-  return base64Url.decode(s).buffer;
+  final normalized = s
+      .replaceAll('-', '+')
+      .replaceAll('_', '/')
+      .padRight((s.length + 3) ~/ 4 * 4, '=');
+
+  return base64Url.decode(normalized).buffer;
 }
 
 String buffer2str(ByteBuffer buf) {
@@ -129,33 +127,39 @@ class _RegistrationViewState extends State<RegistrationView> {
                               "state": state,
                             },
                             null);
-                        final publicKey = res["publicKey"];
-                        if (publicKey == null ||
-                            !publicKey.containsKey("challenge")) {
-                          return;
-                        }
 
+                        Map<String, dynamic> publicKey = res["publicKey"];
                         final challenge = publicKey["challenge"];
-                        res["publicKey"]["challenge"] = str2buffer(challenge);
-                        final uid = publicKey["user"]["id"];
-                        res["publicKey"]["user"]["id"] = str2buffer(uid);
-                        final cred =
-                            await window.navigator.credentials?.create(res);
+                        publicKey["challenge"] = str2buffer(challenge).toJS;
+                        var user = publicKey["user"];
+                        user["id"] = str2buffer(user["id"]).toJS;
+                        publicKey["user"] = user;
+
+                        final publicKeyOpts = publicKey.jsify()
+                            as web.PublicKeyCredentialCreationOptions;
+                        final options = web.CredentialCreationOptions(
+                            publicKey: publicKeyOpts);
+                        final cred = await web.window.navigator.credentials
+                            .create(options)
+                            .toDart;
 
                         if (cred == null) {
                           throw Exception("Failed to acquire credentials.");
                         } else {
-                          var obj = {
-                            "id": cred.id,
-                            "rawId": buffer2str(cred.rawId),
-                            "type": 'public-key',
-                          };
+                          final pubKeyCred = cred as web.PublicKeyCredential;
+                          final response = pubKeyCred.response
+                              as web.AuthenticatorAttestationResponse;
 
-                          obj["response"] = {
-                            "attestationObject":
-                                buffer2str(cred.response.attestationObject),
-                            "clientDataJson":
-                                buffer2str(cred.response.clientDataJson),
+                          final obj = {
+                            "id": pubKeyCred.id,
+                            "rawId": buffer2str(pubKeyCred.rawId.toDart),
+                            "type": 'public-key',
+                            "response": {
+                              "attestationObject":
+                                  buffer2str(response.attestationObject.toDart),
+                              "clientDataJson": buffer2str(
+                                  pubKeyCred.response.clientDataJSON.toDart),
+                            },
                           };
 
                           final res1 = await httpPost(
@@ -225,41 +229,49 @@ class _AuthenticationViewState extends State<AuthenticationView> {
                               "state": state,
                             },
                             null);
-                        final publicKey = res["publicKey"];
-                        if (publicKey == null ||
-                            !publicKey.containsKey("challenge")) {
-                          return;
-                        }
 
+                        Map<String, dynamic> publicKey = res["publicKey"];
                         final challenge = publicKey["challenge"];
-                        res["publicKey"]["challenge"] = str2buffer(challenge);
+                        publicKey["challenge"] = str2buffer(challenge).toJS;
 
-                        final allowedcreds = publicKey["allowCredentials"];
+                        var allowedcreds = publicKey["allowCredentials"];
 
                         for (int i = 0; i < allowedcreds.length; i++) {
                           final cid = allowedcreds[i]["id"];
-                          res["publicKey"]["allowCredentials"][i]["id"] =
-                              str2buffer(cid);
+                          allowedcreds[i]["id"] = str2buffer(cid).toJS;
                         }
+                        publicKey["allowCredentials"] = allowedcreds;
 
-                        final cred =
-                            await window.navigator.credentials?.get(res);
+                        final publicKeyOpts = publicKey.jsify()
+                            as web.PublicKeyCredentialRequestOptions;
+
+                        final options = web.CredentialRequestOptions(
+                          publicKey: publicKeyOpts,
+                        );
+
+                        final cred = await web.window.navigator.credentials
+                            .get(options)
+                            .toDart;
 
                         if (cred == null) {
                           throw Exception("Failed to acquire credentials.");
                         } else {
-                          var obj = {
-                            "id": cred.id,
-                            "rawId": buffer2str(cred.rawId),
-                            "type": 'public-key',
-                          };
+                          final pubKeyCred = cred as web.PublicKeyCredential;
+                          final response = pubKeyCred.response
+                              as web.AuthenticatorAssertionResponse;
 
-                          obj["response"] = {
-                            "authenticatorData":
-                                buffer2str(cred.response.authenticatorData),
-                            "signature": buffer2str(cred.response.signature),
-                            "clientDataJson":
-                                buffer2str(cred.response.clientDataJson),
+                          final obj = {
+                            "id": cred.id,
+                            "rawId": buffer2str(pubKeyCred.rawId.toDart),
+                            "type": 'public-key',
+                            "response": {
+                              "authenticatorData":
+                                  buffer2str(response.authenticatorData.toDart),
+                              "signature":
+                                  buffer2str(response.signature.toDart),
+                              "clientDataJson":
+                                  buffer2str(response.clientDataJSON.toDart),
+                            },
                           };
 
                           final res1 = await httpPost(

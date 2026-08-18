@@ -1,5 +1,5 @@
 /*
-Chapter-6: Multifactor Authentication
+Chapter-9: WebAuthn Authentication
 Ultimate Web Authentication Handbook by Sambit Kumar Dash
 
 This sample code shows the WebAuthn registration and validation workflows.
@@ -11,25 +11,26 @@ This sample code shows the WebAuthn registration and validation workflows.
 Import the certs/sroot.crt root certificate into your browser's trusted roots
 before accessing the website.
 
-Go to the folder frontend and build the flutter application using
+Go to the frontend folder and build the Flutter application using:
 
 flutter build web
 
-Start the server with the command: go run ./webauthn.go
+Start the server with the command:
+go run ./webauthn.go
 
 The website runs at https://mysrv.local:8443/
 
-The server exposes the following endpoints.
+The server exposes the following endpoints:
 
 /register/begin
 /register/finish
 
-These end points used for registering a FIDO token over WebAuthn.
+These endpoints are used for registering a FIDO token over WebAuthn.
 
 /login/begin
 /login/finish
 
-These end points used for authenticating with the WebAuthn token.
+These endpoints are used for authenticating with the WebAuthn token.
 
 The UI shows two views for registration and authentication.
 
@@ -345,7 +346,16 @@ func addWebAuthnHandlers(mux *http.ServeMux) {
 }
 
 func main() {
-	server, mux := setupTLSServer("mysrv.local")
+	server, mux, err := common.SetupHTTPSServer(
+		"mysrv.local", "8443",
+		"../certs/scas.crt",
+		"../certs/mysrv.local.crt",
+		"../certs/mysrv.local.key",
+		[]byte("password"),
+	)
+	if err != nil {
+		log.Default().Fatal(err)
+	}
 	addWebAuthnHandlers(mux)
 	mux.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
 		http.FileServer(http.Dir("frontend/build/web")).ServeHTTP(w, r)
