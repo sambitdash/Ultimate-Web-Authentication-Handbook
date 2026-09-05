@@ -25,7 +25,6 @@ import (
 	"bytes"
 	"context"
 	"crypto/rand"
-	"crypto/tls"
 	"encoding/base32"
 	"encoding/json"
 	"fmt"
@@ -855,33 +854,19 @@ func addStaticRoutes(mux *http.ServeMux) {
 }
 
 func main() {
-	server, mux := getTLSServer("idp.local", "8443")
+	server, mux, err := common.SetupHTTPSServer(
+		"idp.local", "8443",
+		"../certs/scas.crt",
+		"../certs/idp.local.crt",
+		"../certs/idp.local.key",
+		[]byte("password"),
+	)
+	if err != nil {
+		log.Default().Fatal(err)
+	}
 	addOAuthIdPHandlers(mux)
 	addWebAuthnHandlers(mux)
 	addTOTPHandlers(mux)
 	addStaticRoutes(mux)
 	log.Default().Fatal(server.ListenAndServeTLS("", ""))
-}
-
-func getTLSServer(srvName string, port string) (*http.Server, *http.ServeMux) {
-	cert, err := common.GetTLSCert(
-		"../certs/scas.crt",
-		fmt.Sprintf("../certs/%s.crt", srvName),
-		fmt.Sprintf("../certs/%s.key", srvName),
-		[]byte("password"))
-	if err != nil {
-		log.Default().Fatal(err)
-	}
-
-	tlsConfig := &tls.Config{
-		ServerName:   srvName,
-		MinVersion:   tls.VersionTLS13,
-		Certificates: []tls.Certificate{*cert},
-	}
-	mux := http.NewServeMux()
-	return &http.Server{
-		Addr:      ":" + port,
-		TLSConfig: tlsConfig,
-		Handler:   mux,
-	}, mux
 }

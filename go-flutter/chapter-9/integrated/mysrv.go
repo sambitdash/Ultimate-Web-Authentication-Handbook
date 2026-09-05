@@ -29,7 +29,6 @@ package main
 
 import (
 	"context"
-	"crypto/tls"
 	"fmt"
 	"io"
 	"log"
@@ -160,34 +159,19 @@ func addOAuthResServerHandlers(mux *http.ServeMux) {
 }
 
 func main() {
-	server, mux := getTLSServer("mysrv.local", "8444")
+	server, mux, err := common.SetupHTTPSServer(
+		"mysrv.local", "8444",
+		"../certs/scas.crt",
+		"../certs/mysrv.local.crt",
+		"../certs/mysrv.local.key",
+		[]byte("password"),
+	)
+	if err != nil {
+		log.Default().Fatal(err)
+	}
 	addOAuthResServerHandlers(mux)
 	mux.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
 		http.FileServer(http.Dir("mysrvfront/build/web")).ServeHTTP(w, r)
 	})
 	log.Default().Fatal(server.ListenAndServeTLS("", ""))
-}
-
-func getTLSServer(srvName string, port string) (*http.Server, *http.ServeMux) {
-	cert, err := common.GetTLSCert(
-		"../certs/scas.crt",
-		fmt.Sprintf("../certs/%s.crt", srvName),
-		fmt.Sprintf("../certs/%s.key", srvName),
-		[]byte("password"))
-	if err != nil {
-		log.Default().Fatal(err)
-	}
-
-	tlsConfig := &tls.Config{
-		ServerName:   srvName,
-		MinVersion:   tls.VersionTLS13,
-		Certificates: []tls.Certificate{*cert},
-	}
-
-	mux := http.NewServeMux()
-	return &http.Server{
-		Addr:      ":" + port,
-		TLSConfig: tlsConfig,
-		Handler:   mux,
-	}, mux
 }
