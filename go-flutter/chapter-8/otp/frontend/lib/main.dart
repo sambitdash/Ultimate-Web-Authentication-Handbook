@@ -17,7 +17,7 @@ class KeyData extends ChangeNotifier {
     "algorithm": "SHA1",
     "digits": "6",
   };
-  setData(Map d) {
+  void setData(Map d) {
     data = d;
     notifyListeners();
   }
